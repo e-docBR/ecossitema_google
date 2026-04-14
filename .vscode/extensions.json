@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    // Syntax e IntelliSense para JavaScript/GAS
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+
+    // Google Apps Script helper (preview de .gs, links para o editor online)
+    "motemen.gas-includer",
+
+    // Melhor visualização de JSON (appsscript.json, .clasp.json)
+    "zainchen.json",
+
+    // Git integrado
+    "eamodio.gitlens",
+
+    // Autocompletar para APIs do Google
+    "googlecloudtools.cloudcode"
+  ]
+}

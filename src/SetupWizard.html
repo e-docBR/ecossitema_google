@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <?!= include('CSS') ?>
+</head>
+<body style="background:#fff;">
+
+<!-- Cabeçalho -->
+<div class="header-modal">
+  <h1>🚀 Setup do PEDAGOGO.AI</h1>
+  <small>Assistente de Instalação</small>
+</div>
+
+<!-- Loading -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-msg" class="loading-msg">Processando...</div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Barra de progresso -->
+<div class="wizard-progress">
+  <div class="wizard-step" id="step-1"></div>
+  <div class="wizard-step" id="step-2"></div>
+  <div class="wizard-step" id="step-3"></div>
+  <div class="wizard-step" id="step-4"></div>
+  <div class="wizard-step" id="step-5"></div>
+  <div class="wizard-step" id="step-6"></div>
+</div>
+
+<!-- Corpo do wizard -->
+<div class="wizard-body" id="wizard-body">
+
+  <!-- Tela inicial -->
+  <div id="tela-inicio">
+    <div class="text-center" style="padding:20px 0;">
+      <div style="font-size:48px;">🤖</div>
+      <h2 style="margin:12px 0 8px;">Bem-vindo ao PEDAGOGO.AI</h2>
+      <p class="text-muted">Este assistente vai configurar todo o sistema de automação pedagógica
+        no seu Google Workspace.</p>
+    </div>
+    <div style="background:var(--cor-primaria-clara);border-radius:var(--raio);padding:14px;margin:12px 0;">
+      <p style="font-size:13px;font-weight:500;margin-bottom:8px;">O setup vai executar:</p>
+      <div class="wizard-etapa">
+        <span class="etapa-icone">🔍</span>
+        <span class="etapa-texto">Verificar pré-requisitos (chave Gemini)</span>
+      </div>
+      <div class="wizard-etapa">
+        <span class="etapa-icone">📁</span>
+        <span class="etapa-texto">Criar estrutura de pastas no Drive</span>
+      </div>
+      <div class="wizard-etapa">
+        <span class="etapa-icone">📊</span>
+        <span class="etapa-texto">Criar planilhas-mestre (BNCC, Questões, Turmas, Resultados)</span>
+      </div>
+      <div class="wizard-etapa">
+        <span class="etapa-icone">🔒</span>
+        <span class="etapa-texto">Aplicar proteções LGPD</span>
+      </div>
+      <div class="wizard-etapa">
+        <span class="etapa-icone">⚡</span>
+        <span class="etapa-texto">Instalar triggers automáticos</span>
+      </div>
+      <div class="wizard-etapa">
+        <span class="etapa-icone">📝</span>
+        <span class="etapa-texto">Criar formulários do sistema</span>
+      </div>
+    </div>
+    <p class="text-muted text-center" style="font-size:11px;">
+      💡 A chave Gemini pode ser configurada antes ou após o setup.<br>
+      Acesse: painel → 🔧 Configurar → Chave API Gemini
+    </p>
+  </div>
+
+  <!-- Tela de progresso (exibida durante execução) -->
+  <div id="tela-progresso" class="oculto">
+    <div id="etapas-lista"></div>
+  </div>
+
+  <!-- Tela final -->
+  <div id="tela-final" class="oculto">
+    <div class="text-center" style="padding:12px 0;">
+      <div style="font-size:48px;">✅</div>
+      <h2 style="margin:12px 0;">Setup Concluído!</h2>
+    </div>
+    <div id="resumo-final" style="background:var(--cor-secundaria-clara);border-radius:var(--raio);padding:14px;margin-bottom:12px;font-size:13px;"></div>
+    <div style="background:var(--cor-alerta-clara);border-radius:var(--raio);padding:14px;font-size:13px;">
+      <p style="font-weight:500;margin-bottom:8px;">📋 Próximos Passos:</p>
+      <ol style="padding-left:20px;line-height:2;">
+        <li>Importe o catálogo BNCC na aba 'Habilidades' do MASTER_BNCC</li>
+        <li>Cadastre as turmas e alunos na planilha TURMAS_ALUNOS</li>
+        <li>Configure os e-mails em Propriedades de script:<br>
+           <code style="font-size:11px;">EMAIL_COORDENACAO, EMAIL_DIRECAO</code></li>
+        <li>Realize o teste piloto: gere 1 plano de aula</li>
+        <li>Para provas digitais: use "Criar Prova Digital" após gerar uma prova</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Tela de erro -->
+  <div id="tela-erro" class="oculto">
+    <div class="text-center" style="padding:12px 0;">
+      <div style="font-size:48px;">❌</div>
+      <h2 style="margin:12px 0;color:var(--cor-erro);">Erro no Setup</h2>
+    </div>
+    <div id="erro-detalhes" class="resultado resultado-erro"></div>
+  </div>
+</div>
+
+<!-- Rodapé -->
+<div class="wizard-footer">
+  <button class="btn btn-secondary btn-sm" onclick="google.script.host.close()" id="btn-fechar">Fechar</button>
+  <button class="btn btn-primary btn-sm" id="btn-iniciar" onclick="iniciarSetup()">🚀 Iniciar Setup</button>
+</div>
+
+<?!= include('JS') ?>
+
+<script>
+var ETAPAS = [
+  { id: 1, icone: '🔍', texto: 'Verificar pré-requisitos', funcao: 'executarEtapaSetup' },
+  { id: 2, icone: '📁', texto: 'Criar estrutura de pastas', funcao: 'executarEtapaSetup' },
+  { id: 3, icone: '📊', texto: 'Criar planilhas-mestre', funcao: 'executarEtapaSetup' },
+  { id: 4, icone: '🔒', texto: 'Aplicar proteções LGPD', funcao: 'executarEtapaSetup' },
+  { id: 5, icone: '⚡', texto: 'Instalar triggers', funcao: 'executarEtapaSetup' },
+  { id: 6, icone: '📝', texto: 'Criar formulários', funcao: 'executarEtapaSetup' }
+];
+
+var etapaAtual = 0;
+var resultados = {};
+
+function iniciarSetup() {
+  document.getElementById('btn-iniciar').classList.add('oculto');
+  document.getElementById('tela-inicio').classList.add('oculto');
+  document.getElementById('tela-progresso').classList.remove('oculto');
+
+  // Construir lista de etapas
+  var html = '';
+  ETAPAS.forEach(function(etapa) {
+    html += '<div class="wizard-etapa" id="etapa-' + etapa.id + '">' +
+      '<span class="etapa-icone">' + etapa.icone + '</span>' +
+      '<span class="etapa-texto">' + etapa.texto + '</span>' +
+      '<span class="etapa-status" id="status-' + etapa.id + '">⏳ Aguardando</span></div>';
+  });
+  document.getElementById('etapas-lista').innerHTML = html;
+
+  etapaAtual = 0;
+  executarProximaEtapa();
+}
+
+function executarProximaEtapa() {
+  if (etapaAtual >= ETAPAS.length) {
+    concluirSetup();
+    return;
+  }
+
+  var etapa = ETAPAS[etapaAtual];
+  var stepBar = document.getElementById('step-' + etapa.id);
+  var statusEl = document.getElementById('status-' + etapa.id);
+
+  stepBar.className = 'wizard-step ativo';
+  statusEl.textContent = '⏳ Executando...';
+  statusEl.style.color = 'var(--cor-primaria)';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      stepBar.className = 'wizard-step concluido';
+      resultados[etapa.id] = res;
+
+      // Etapa 1: GEMINI_KEY ausente é aviso, não bloqueante
+      if (etapa.id === 1 && res && res.geminiOk === false) {
+        stepBar.className = 'wizard-step alerta';
+        statusEl.textContent = '⚠️ OK (Gemini: configurar depois)';
+        statusEl.style.color = 'var(--cor-alerta)';
+        resultados['geminiPendente'] = true;
+      } else {
+        statusEl.textContent = '✅ Concluído';
+        statusEl.style.color = 'var(--cor-secundaria)';
+      }
+      etapaAtual++;
+      executarProximaEtapa();
+    })
+    .withFailureHandler(function(erro) {
+      stepBar.className = 'wizard-step erro';
+      statusEl.textContent = '❌ Erro';
+      statusEl.style.color = 'var(--cor-erro)';
+
+      // Etapas não-críticas (triggers, formulários) podem continuar
+      if (etapa.id >= 5) {
+        statusEl.textContent = '⚠️ Ignorado';
+        statusEl.style.color = 'var(--cor-alerta)';
+        resultados[etapa.id] = { alerta: erro.message };
+        etapaAtual++;
+        executarProximaEtapa();
+      } else {
+        mostrarErroSetup(etapa.texto, erro.message);
+      }
+    })
+    .executarEtapaSetup(etapa.id);
+}
+
+function concluirSetup() {
+  document.getElementById('tela-progresso').classList.add('oculto');
+  document.getElementById('tela-final').classList.remove('oculto');
+
+  var html = '<p><strong>📁 Pastas criadas</strong> no Drive: PEDAGOGO.AI/</p>' +
+    '<p><strong>📊 Planilhas criadas:</strong> MASTER_BNCC, BANCO_QUESTOES, TURMAS_ALUNOS, RESULTADOS</p>';
+
+  if (resultados[6] && resultados[6].urlFormPlano) {
+    html += '<p><strong>📝 Formulário Plano de Aula:</strong><br>' +
+      '<a href="' + escapeHtml(resultados[6].urlFormPlano) + '" target="_blank" style="font-size:11px;">' +
+      escapeHtml(resultados[6].urlFormPlano) + '</a></p>';
+  }
+
+  if (resultados['geminiPendente']) {
+    html += '<div style="margin-top:8px;padding:8px 12px;background:#fff3e0;border-radius:4px;font-size:12px;border-left:3px solid #f57c00;">' +
+      '<strong>🔑 Configure a Chave Gemini:</strong><br>' +
+      'Abra o painel → 🔧 Configurar → insira a chave API Gemini.<br>' +
+      'Sem ela, nenhuma ferramenta de IA estará disponível.</div>';
+  }
+
+  var alertas = [];
+  for (var id in resultados) {
+    if (resultados[id] && resultados[id].alerta) {
+      alertas.push(resultados[id].alerta);
+    }
+  }
+  if (alertas.length > 0) {
+    html += '<div style="margin-top:8px;padding:8px 12px;background:var(--cor-alerta-clara);border-radius:4px;font-size:12px;">' +
+      '<strong>⚠️ Avisos:</strong><br>' + alertas.map(escapeHtml).join('<br>') + '</div>';
+  }
+
+  document.getElementById('resumo-final').innerHTML = html;
+}
+
+function mostrarErroSetup(etapa, mensagem) {
+  document.getElementById('tela-progresso').classList.add('oculto');
+  document.getElementById('tela-erro').classList.remove('oculto');
+  document.getElementById('erro-detalhes').innerHTML =
+    '<h3>Falha na etapa: ' + escapeHtml(etapa) + '</h3>' +
+    '<p>' + escapeHtml(mensagem) + '</p>' +
+    '<p class="mt-8 text-muted">Corrija o problema e execute o setup novamente.</p>';
+}
+</script>
+
+</body>
+</html>

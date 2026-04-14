@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <?!= include('CSS') ?>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CABEÇALHO
+     ═══════════════════════════════════════════════════════════ -->
+<div class="header">
+  <h1>🤖 PEDAGOGO.AI</h1>
+  <small>Colégio Municipal de Itabatan</small>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOADING OVERLAY
+     ═══════════════════════════════════════════════════════════ -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-msg" class="loading-msg">Processando...</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST CONTAINER
+     ═══════════════════════════════════════════════════════════ -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: HOME (Grid de Ferramentas)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-home" class="pagina">
+
+  <div class="section-title">Ferramentas Principais</div>
+  <div class="tools-grid">
+    <div class="tool-card" onclick="abrirFerramenta('questoes')">
+      <span class="emoji">🧠</span>
+      <span class="label">Gerar Questões da Seleção</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('plano')">
+      <span class="emoji">📝</span>
+      <span class="label">Plano de Aula Rápido</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('corrigir')">
+      <span class="emoji">✅</span>
+      <span class="label">Corrigir Selecionado</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('adaptar')">
+      <span class="emoji">♿</span>
+      <span class="label">Adaptar NEE / EJA</span>
+    </div>
+  </div>
+
+  <div class="section-title">Ferramentas Pedagógicas</div>
+  <div class="tools-grid">
+    <div class="tool-card" onclick="navegarPara('relatorio')">
+      <span class="emoji">📊</span>
+      <span class="label">Relatório da Turma</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('comunicado')">
+      <span class="emoji">📧</span>
+      <span class="label">Comunicado para Família</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('diagnostico')">
+      <span class="emoji">🎯</span>
+      <span class="label">Diagnóstico Formativo</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('pauta')">
+      <span class="emoji">📋</span>
+      <span class="label">Pauta Conselho de Classe</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('pei')">
+      <span class="emoji">📝</span>
+      <span class="label">Gerar PEI / PDI</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('prova')">
+      <span class="emoji">📄</span>
+      <span class="label">Prova Digital (Forms)</span>
+    </div>
+    <div class="tool-card tool-card-wide" onclick="navegarPara('lote')">
+      <span class="emoji">📚</span>
+      <span class="label">Corrigir Lote de Redações</span>
+    </div>
+  </div>
+
+  <div class="section-title">Gestão Escolar</div>
+  <div class="tools-grid">
+    <div class="tool-card" onclick="navegarPara('frequencia')">
+      <span class="emoji">📅</span>
+      <span class="label">Lançar Frequência</span>
+    </div>
+    <div class="tool-card" onclick="navegarPara('matricula')">
+      <span class="emoji">👤</span>
+      <span class="label">Matricular Aluno</span>
+    </div>
+  </div>
+
+  <div class="footer-links">
+    <a onclick="navegarPara('configuracoes')">🔧 Configurar</a>
+    <a onclick="navegarPara('sistema')">⚙️ Sistema</a>
+    <a onclick="navegarPara('sobre')">ℹ️ Sobre</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: PLANO DE AULA RÁPIDO
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-plano" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📝 Plano de Aula Rápido</h2>
+    <div id="form-plano">
+      <div class="campo">
+        <label for="plano-componente">Componente Curricular *</label>
+        <select id="plano-componente" required>
+          <option value="" disabled selected>— Selecione —</option>
+          <option>Língua Portuguesa</option>
+          <option>Matemática</option>
+          <option>Ciências</option>
+          <option>História</option>
+          <option>Geografia</option>
+          <option>Arte</option>
+          <option>Educação Física</option>
+          <option>Ensino Religioso</option>
+          <option>Língua Inglesa</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="plano-ano">Ano / Série *</label>
+        <select id="plano-ano" required>
+          <option value="" disabled selected>— Selecione —</option>
+          <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+          <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+          <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+          <option>EJA Segmento I</option><option>EJA Segmento II</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="plano-turma">Turma *</label>
+        <input type="text" id="plano-turma" placeholder="Ex: 7A" required>
+      </div>
+      <div class="campo">
+        <label for="plano-bncc">Código Habilidade BNCC *</label>
+        <input type="text" id="plano-bncc" placeholder="Ex: EF07MA18" required
+               pattern="EF\d{2}[A-Z]{2}\d{2}" style="text-transform:uppercase">
+        <div class="hint">Formato: EF + 2 dígitos + 2 letras + 2 dígitos</div>
+      </div>
+      <div class="campo">
+        <label for="plano-tema">Tema / Conteúdo Central *</label>
+        <input type="text" id="plano-tema" placeholder="Ex: Porcentagem no cotidiano" required>
+      </div>
+      <div class="campo">
+        <label for="plano-duracao">Duração (aulas de 50min)</label>
+        <input type="number" id="plano-duracao" value="1" min="1" max="10">
+      </div>
+      <div class="campo">
+        <label>Recursos Disponíveis</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="plano-recursos" value="Lousa"> Lousa</label>
+          <label><input type="checkbox" name="plano-recursos" value="Data show"> Data show</label>
+          <label><input type="checkbox" name="plano-recursos" value="Celular"> Celular</label>
+          <label><input type="checkbox" name="plano-recursos" value="Lab. Informática"> Lab. Informática</label>
+          <label><input type="checkbox" name="plano-recursos" value="Biblioteca"> Biblioteca</label>
+          <label><input type="checkbox" name="plano-recursos" value="Material impresso"> Material impresso</label>
+          <label><input type="checkbox" name="plano-recursos" value="PNLD"> PNLD</label>
+          <label><input type="checkbox" name="plano-recursos" value="Jogos"> Jogos</label>
+        </div>
+      </div>
+      <div class="campo">
+        <label><input type="checkbox" id="plano-nee"> Há alunos com NEE nesta turma</label>
+      </div>
+      <button class="btn btn-primary" onclick="enviarPlano()">📝 Gerar Plano de Aula</button>
+    </div>
+    <div id="resultado-plano" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: CORRIGIR SELECIONADO
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-corrigir" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>✅ Corrigir Resposta Discursiva</h2>
+    <p class="text-muted mb-8">Selecione a resposta do aluno no documento antes de usar esta ferramenta.</p>
+    <div id="form-corrigir">
+      <div class="campo">
+        <label for="corrigir-enunciado">Enunciado da Questão *</label>
+        <textarea id="corrigir-enunciado" rows="3" required placeholder="Cole o enunciado da questão aqui..."></textarea>
+      </div>
+      <div class="campo">
+        <label for="corrigir-bncc">Código BNCC *</label>
+        <input type="text" id="corrigir-bncc" placeholder="Ex: EF08LP04" required style="text-transform:uppercase">
+      </div>
+      <button class="btn btn-primary" onclick="enviarCorrecao()">✅ Corrigir Resposta</button>
+    </div>
+    <div id="resultado-corrigir" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: ADAPTAR PARA NEE/EJA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-adaptar" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>♿ Adaptar Conteúdo para NEE/EJA</h2>
+    <p class="text-muted mb-8">Selecione o conteúdo no documento que deseja adaptar.</p>
+    <div id="form-adaptar">
+      <div class="campo">
+        <label>Tipo de Adaptação *</label>
+        <div class="radio-group">
+          <label><input type="radio" name="adaptar-tipo" value="1"> <span>NEE — Deficiência Intelectual (DI)</span></label>
+          <label><input type="radio" name="adaptar-tipo" value="2"> <span>NEE — Transtorno do Espectro Autista (TEA)</span></label>
+          <label><input type="radio" name="adaptar-tipo" value="3"> <span>EJA — Adultos</span></label>
+          <label><input type="radio" name="adaptar-tipo" value="4"> <span>Altas Habilidades / Superdotação</span></label>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="enviarAdaptacao()">♿ Adaptar Conteúdo</button>
+    </div>
+    <div id="resultado-adaptar" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: RELATÓRIO DA TURMA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-relatorio" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📊 Relatório da Turma</h2>
+    <div id="form-relatorio">
+      <div class="campo">
+        <label for="relatorio-turma">Turma *</label>
+        <select id="relatorio-turma" required>
+          <option value="" disabled selected>— Carregando turmas... —</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="relatorio-componente">Componente Curricular *</label>
+        <select id="relatorio-componente" required>
+          <option value="" disabled selected>— Selecione —</option>
+          <option>Língua Portuguesa</option>
+          <option>Matemática</option>
+          <option>Ciências</option>
+          <option>História</option>
+          <option>Geografia</option>
+          <option>Arte</option>
+          <option>Educação Física</option>
+          <option>Ensino Religioso</option>
+          <option>Língua Inglesa</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="relatorio-bimestre">Bimestre *</label>
+        <input type="text" id="relatorio-bimestre" placeholder="Ex: 1B_2026" required>
+        <div class="hint">Formato: NúmeroBimestre + B_ + Ano (ex: 2B_2026)</div>
+      </div>
+      <button class="btn btn-primary" onclick="enviarRelatorio()">📊 Gerar Relatório</button>
+    </div>
+    <div id="resultado-relatorio" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: COMUNICADO PARA FAMÍLIA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-comunicado" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📧 Comunicado para Família</h2>
+    <div id="form-comunicado">
+      <div class="campo">
+        <label for="comunicado-motivo">Motivo do Comunicado *</label>
+        <textarea id="comunicado-motivo" rows="4" required
+                  placeholder="Descreva o motivo: frequência crítica, baixo desempenho, reunião de pais, etc."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="enviarComunicado()">📧 Gerar Comunicado</button>
+    </div>
+    <div id="resultado-comunicado" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: DIAGNÓSTICO FORMATIVO
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-diagnostico" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>🎯 Diagnóstico Formativo</h2>
+    <div id="form-diagnostico">
+      <div class="campo">
+        <label for="diag-componente">Componente Curricular *</label>
+        <select id="diag-componente" required>
+          <option value="" disabled selected>— Selecione —</option>
+          <option>Língua Portuguesa</option>
+          <option>Matemática</option>
+          <option>Ciências</option>
+          <option>História</option>
+          <option>Geografia</option>
+          <option>Arte</option>
+          <option>Educação Física</option>
+          <option>Ensino Religioso</option>
+          <option>Língua Inglesa</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="diag-ano">Ano / Série *</label>
+        <select id="diag-ano" required>
+          <option value="" disabled selected>— Selecione —</option>
+          <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+          <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+          <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+          <option>EJA Segmento I</option><option>EJA Segmento II</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="diag-bncc">Habilidade BNCC *</label>
+        <input type="text" id="diag-bncc" placeholder="Ex: EF08CI07" required style="text-transform:uppercase">
+      </div>
+      <button class="btn btn-primary" onclick="enviarDiagnostico()">🎯 Gerar Diagnóstico</button>
+    </div>
+    <div id="resultado-diagnostico" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: PAUTA DE CONSELHO DE CLASSE
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-pauta" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📋 Pauta de Conselho de Classe</h2>
+    <div id="form-pauta">
+      <div class="campo">
+        <label for="pauta-turma">Turma *</label>
+        <select id="pauta-turma" required>
+          <option value="" disabled selected>— Carregando turmas... —</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="pauta-bimestre">Bimestre *</label>
+        <input type="text" id="pauta-bimestre" placeholder="Ex: 2B_2026" required>
+      </div>
+      <button class="btn btn-primary" onclick="enviarPauta()">📋 Gerar Pauta</button>
+    </div>
+    <div id="resultado-pauta" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: GERAR PEI / PDI (NEE)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-pei" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📝 Gerar PEI / PDI (NEE)</h2>
+    <p class="text-muted mb-8">Plano Educacional Individualizado para alunos com Necessidades Educacionais Especiais.</p>
+    <div id="form-pei">
+      <div class="campo">
+        <label for="pei-nome">Nome do Aluno *</label>
+        <input type="text" id="pei-nome" placeholder="Nome completo do aluno" required>
+      </div>
+      <div class="campo">
+        <label for="pei-turma">Turma *</label>
+        <select id="pei-turma" required>
+          <option value="" disabled selected>— Carregando turmas... —</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="pei-tipo">Tipo de NEE *</label>
+        <select id="pei-tipo" required>
+          <option value="" disabled selected>— Selecione —</option>
+          <option value="TEA">TEA — Transtorno do Espectro Autista</option>
+          <option value="DI">DI — Deficiência Intelectual</option>
+          <option value="DA">DA — Deficiência Auditiva</option>
+          <option value="DF">DF — Deficiência Física</option>
+          <option value="TDAH">TDAH — Transtorno de Déficit de Atenção</option>
+          <option value="Altas_Habilidades">Altas Habilidades / Superdotação</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Componentes Curriculares</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="pei-componentes" value="Língua Portuguesa"> L. Portuguesa</label>
+          <label><input type="checkbox" name="pei-componentes" value="Matemática"> Matemática</label>
+          <label><input type="checkbox" name="pei-componentes" value="Ciências"> Ciências</label>
+          <label><input type="checkbox" name="pei-componentes" value="História"> História</label>
+          <label><input type="checkbox" name="pei-componentes" value="Geografia"> Geografia</label>
+          <label><input type="checkbox" name="pei-componentes" value="Arte"> Arte</label>
+          <label><input type="checkbox" name="pei-componentes" value="Educação Física"> Ed. Física</label>
+          <label><input type="checkbox" name="pei-componentes" value="Língua Inglesa"> Inglês</label>
+        </div>
+        <div class="hint">Se nenhum for marcado, será gerado para todos os componentes.</div>
+      </div>
+      <button class="btn btn-primary" onclick="enviarPEI()">📝 Gerar PEI</button>
+    </div>
+    <div id="resultado-pei" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: PROVA DIGITAL (FORMS)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-prova" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📄 Criar Prova Digital (Google Forms)</h2>
+    <div id="form-prova">
+      <div class="campo">
+        <label for="prova-gabarito">ID do Gabarito *</label>
+        <input type="text" id="prova-gabarito" required
+               placeholder="Encontre na planilha BANCO_QUESTOES, aba Gabaritos, coluna A">
+      </div>
+      <div class="campo">
+        <label for="prova-prazo">Prazo para respostas (opcional)</label>
+        <input type="date" id="prova-prazo">
+      </div>
+      <button class="btn btn-primary" onclick="enviarProva()">📄 Criar Prova Digital</button>
+    </div>
+    <div id="resultado-prova" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: CORRIGIR LOTE DE REDAÇÕES
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-lote" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📚 Correção em Lote de Redações</h2>
+    <p class="text-muted mb-8">Cada documento na pasta deve conter a redação de um aluno.<br>
+      Padrão de nome: "Redação — Nome do Aluno"</p>
+    <div id="form-lote">
+      <div class="campo">
+        <label for="lote-pasta">ID da Pasta no Drive *</label>
+        <input type="text" id="lote-pasta" required placeholder="ID da pasta contendo os documentos">
+      </div>
+      <div class="campo">
+        <label for="lote-enunciado">Enunciado da Atividade *</label>
+        <textarea id="lote-enunciado" rows="3" required placeholder="Cole o enunciado da atividade/questão..."></textarea>
+      </div>
+      <div class="campo">
+        <label for="lote-bncc">Código BNCC *</label>
+        <input type="text" id="lote-bncc" placeholder="Ex: EF08LP04" required style="text-transform:uppercase">
+      </div>
+      <button class="btn btn-primary" onclick="enviarLote()">📚 Iniciar Correção em Lote</button>
+    </div>
+    <div id="resultado-lote" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: FREQUÊNCIA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-frequencia" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>📅 Lançar Frequência</h2>
+
+    <div id="form-freq">
+      <div class="campo">
+        <label for="freq-turma">Turma *</label>
+        <select id="freq-turma" required onchange="carregarAlunosTurma()">
+          <option value="" disabled selected>— Selecione —</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="freq-componente">Componente Curricular</label>
+        <select id="freq-componente">
+          <option value="">— Todos / Geral —</option>
+          <option>Língua Portuguesa</option>
+          <option>Matemática</option>
+          <option>Ciências</option>
+          <option>História</option>
+          <option>Geografia</option>
+          <option>Arte</option>
+          <option>Educação Física</option>
+          <option>Língua Inglesa</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="freq-data">Data *</label>
+        <input type="date" id="freq-data" required>
+      </div>
+    </div>
+
+    <!-- Tabela de chamada (preenchida dinamicamente) -->
+    <div id="freq-lista-container" style="display:none;margin-top:12px;">
+      <div class="section-title" style="font-size:12px;margin-bottom:6px;">
+        Chamada — <span id="freq-turma-label"></span>
+      </div>
+      <div id="freq-lista"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-sm" style="flex:1;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;"
+                onclick="marcarTodosPresente()">✅ Todos P</button>
+        <button class="btn btn-sm" style="flex:1;background:#fce4ec;color:#c62828;border:1px solid #f48fb1;"
+                onclick="marcarTodosFalta()">❌ Todos F</button>
+      </div>
+      <button class="btn btn-primary mt-16" style="width:100%" onclick="registrarChamada()">
+        💾 Registrar Chamada
+      </button>
+    </div>
+
+    <div id="resultado-freq" class="resultado-container mt-16"></div>
+
+    <hr style="border:none;border-top:1px solid var(--cor-borda);margin:16px 0;">
+
+    <div class="section-title" style="font-size:12px;">Chamada via Google Forms</div>
+    <p class="text-muted" style="font-size:12px;margin-bottom:8px;">
+      Cria um Form para professores lançarem presença diretamente do celular.
+    </p>
+    <button class="btn btn-secondary" style="width:100%" onclick="gerarFormChamada()">
+      📋 Gerar Form de Chamada
+    </button>
+    <div id="resultado-form-chamada" class="resultado-container mt-8"></div>
+
+    <hr style="border:none;border-top:1px solid var(--cor-borda);margin:16px 0;">
+
+    <div class="section-title" style="font-size:12px;">Resumo de Faltas da Turma</div>
+    <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="verResumoFaltas()">
+      📊 Ver Resumo de Faltas
+    </button>
+    <div id="freq-resumo" class="resultado-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: MATRÍCULA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-matricula" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>👤 Matricular Aluno</h2>
+
+    <div id="form-matricula">
+      <div class="campo">
+        <label for="mat-nome">Nome Completo *</label>
+        <input type="text" id="mat-nome" placeholder="Nome completo do aluno" required>
+      </div>
+      <div class="campo">
+        <label for="mat-nascimento">Data de Nascimento</label>
+        <input type="date" id="mat-nascimento">
+      </div>
+      <div class="campo">
+        <label for="mat-turma">Turma *</label>
+        <select id="mat-turma" required onchange="atualizarCamposEJA()">
+          <option value="" disabled selected>— Selecione —</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="mat-turno">Turno *</label>
+        <select id="mat-turno">
+          <option value="Matutino">Matutino</option>
+          <option value="Vespertino" selected>Vespertino</option>
+          <option value="Noturno">Noturno</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="mat-segmento">Segmento *</label>
+        <select id="mat-segmento" required>
+          <option value="EF II">Ensino Fundamental II</option>
+          <option value="EJA Segmento II">EJA Segmento II</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="mat-responsavel">Responsável</label>
+        <input type="text" id="mat-responsavel" placeholder="Nome do responsável">
+      </div>
+      <div class="campo">
+        <label for="mat-whatsapp">WhatsApp do Responsável</label>
+        <input type="tel" id="mat-whatsapp" placeholder="(73) 9xxxx-xxxx">
+      </div>
+      <div class="campo">
+        <label for="mat-email">E-mail do Responsável</label>
+        <input type="email" id="mat-email" placeholder="responsavel@email.com">
+      </div>
+
+      <!-- NEE -->
+      <div class="campo" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="mat-nee" onchange="toggleNEEFields()">
+        <label for="mat-nee" style="margin:0;font-size:13px;">Possui Necessidade Educacional Especial (NEE)</label>
+      </div>
+      <div id="campos-nee" style="display:none;">
+        <div class="campo">
+          <label for="mat-tipo-nee">Tipo de NEE</label>
+          <select id="mat-tipo-nee">
+            <option value="">— Selecione —</option>
+            <option value="TEA">TEA — Transtorno do Espectro Autista</option>
+            <option value="DI">DI — Deficiência Intelectual</option>
+            <option value="DA">DA — Deficiência Auditiva</option>
+            <option value="DF">DF — Deficiência Física</option>
+            <option value="TDAH">TDAH</option>
+            <option value="Altas_Habilidades">Altas Habilidades / Superdotação</option>
+          </select>
+        </div>
+        <div class="campo" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="mat-laudo">
+          <label for="mat-laudo" style="margin:0;font-size:13px;">Possui laudo médico</label>
+        </div>
+        <div class="campo" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="mat-pei">
+          <label for="mat-pei" style="margin:0;font-size:13px;">Requer PEI/PDI</label>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="mat-obs">Observações Pedagógicas</label>
+        <textarea id="mat-obs" rows="2" placeholder="Aspectos relevantes para os professores..."></textarea>
+      </div>
+
+      <!-- Campos EJA (mostrados apenas para turmas EJA) -->
+      <div id="campos-eja" style="display:none;">
+        <hr style="border:none;border-top:1px solid var(--cor-borda);margin:8px 0;">
+        <div class="section-title" style="font-size:12px;color:var(--cor-primaria);">Campos EJA</div>
+        <div class="campo">
+          <label for="mat-faixa-eja">Faixa Etária *</label>
+          <select id="mat-faixa-eja">
+            <option value="">— Selecione —</option>
+            <option value="15-20">15 – 20 anos</option>
+            <option value="21-30">21 – 30 anos</option>
+            <option value="31-40">31 – 40 anos</option>
+            <option value="41-50">41 – 50 anos</option>
+            <option value="51+">51 anos ou mais</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="mat-esc-anterior-eja">Escolaridade Anterior</label>
+          <input type="text" id="mat-esc-anterior-eja" placeholder="Ex: 4º Ano EF I">
+        </div>
+        <div class="campo">
+          <label for="mat-motivacao-eja">Motivação para Retorno</label>
+          <input type="text" id="mat-motivacao-eja" placeholder="Ex: Melhora no emprego">
+        </div>
+        <div class="campo">
+          <label for="mat-turno-trab-eja">Turno de Trabalho</label>
+          <select id="mat-turno-trab-eja">
+            <option value="">Não trabalha</option>
+            <option value="Manhã">Manhã</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noite">Noite</option>
+            <option value="Integral">Integral</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary mt-16" style="width:100%" onclick="submeterMatricula()">
+        ✅ Matricular Aluno
+      </button>
+    </div>
+
+    <div id="resultado-matricula" class="resultado-container mt-16"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: SISTEMA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-sistema" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>⚙️ Sistema</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-primary" onclick="executarDiagnostico()">
+        🔍 Diagnóstico do Sistema
+      </button>
+      <button class="btn btn-secondary" onclick="abrirPasta()">
+        📁 Abrir Pasta PEDAGOGO.AI
+      </button>
+      <button class="btn btn-secondary" onclick="navegarPara('configuracoes')">
+        🔧 Configurações
+      </button>
+      <button class="btn btn-secondary" onclick="navegarPara('sobre')">
+        ℹ️ Sobre o PEDAGOGO.AI
+      </button>
+    </div>
+    <div id="resultado-sistema" class="resultado-container mt-16"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: SOBRE
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-sobre" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page text-center">
+    <div style="font-size:48px;margin:20px 0;">🤖</div>
+    <h2>PEDAGOGO.AI</h2>
+    <p class="text-muted">Versão 1.0 — Abril 2026</p>
+    <div style="margin:20px 0;padding:16px;background:var(--cor-branco);border-radius:var(--raio);border:1px solid var(--cor-borda);">
+      <p style="font-size:13px;margin-bottom:8px;"><strong>Sistema de Automação Pedagógica</strong></p>
+      <p class="text-muted">Colégio Municipal de 1º e 2º Graus de Itabatan</p>
+      <p class="text-muted">Secretaria Municipal de Educação de Mucuri — SEME/Mucuri-BA</p>
+      <p class="text-muted mt-8">Coordenação Pedagógica | EJA Anos Finais</p>
+    </div>
+    <div style="text-align:left;padding:12px;background:var(--cor-branco);border-radius:var(--raio);border:1px solid var(--cor-borda);">
+      <p class="text-muted mb-8"><strong>Módulos:</strong></p>
+      <p class="text-muted">📝 Planos de Aula BNCC-alinhados</p>
+      <p class="text-muted">🧠 Banco de Questões com Gemini</p>
+      <p class="text-muted">✅ Correção Automática + Discursivas</p>
+      <p class="text-muted">📊 Frequência com alertas LDBEN</p>
+      <p class="text-muted">📈 Relatórios e Dashboard Analítico</p>
+      <p class="text-muted">♿ Inclusão: PEI/PDI, NEE, EJA</p>
+      <p class="text-muted">🔒 Conformidade LGPD</p>
+    </div>
+    <p class="text-muted mt-16">
+      Desenvolvido com Google Workspace for Education + Gemini AI
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: CONFIGURAÇÕES
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-configuracoes" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>🔧 Configurações</h2>
+
+    <!-- Status rápido -->
+    <div id="config-status-box" style="margin-bottom:12px;padding:10px 12px;background:var(--cor-fundo);border-radius:var(--raio);border:1px solid var(--cor-borda);font-size:12px;line-height:1.8;">
+      <em>Carregando status...</em>
+    </div>
+
+    <!-- Chave Gemini -->
+    <div class="campo">
+      <label for="cfg-gemini">🔑 Chave API Gemini (Google AI Studio) *</label>
+      <input type="password" id="cfg-gemini" placeholder="AIza..." autocomplete="off">
+      <small class="text-muted">Obtida em <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></small>
+    </div>
+
+    <!-- E-mails -->
+    <div class="campo">
+      <label for="cfg-email-coord">📧 E-mail Coordenação</label>
+      <input type="email" id="cfg-email-coord" placeholder="coordenacao@escola.edu.br">
+    </div>
+    <div class="campo">
+      <label for="cfg-email-dir">📧 E-mail Direção</label>
+      <input type="email" id="cfg-email-dir" placeholder="direcao@escola.edu.br">
+    </div>
+    <div class="campo">
+      <label for="cfg-email-sec">📧 E-mail Secretaria (opcional)</label>
+      <input type="email" id="cfg-email-sec" placeholder="secretaria@escola.edu.br">
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="btn btn-primary" style="flex:1" onclick="salvarConfig()">💾 Salvar</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="testarGeminiConexao()">🔗 Testar Gemini</button>
+    </div>
+    <div id="cfg-resultado" class="resultado-container"></div>
+
+    <hr style="border:none;border-top:1px solid var(--cor-borda);margin:16px 0;">
+
+    <div class="section-title">🌱 Dados Iniciais</div>
+    <p class="text-muted" style="font-size:12px;margin-bottom:12px;">Execute após o Setup para habilitar as ferramentas de IA.</p>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn btn-secondary" onclick="popularBNCCCatalogo()">
+        📚 Popular Catálogo BNCC (~60 habilidades)
+      </button>
+      <button class="btn btn-secondary" onclick="popularTestData()">
+        🧪 Inserir Turmas e Alunos de Teste
+      </button>
+      <button class="btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;" onclick="limparTestData()">
+        🗑️ Limpar Dados de Teste
+      </button>
+    </div>
+    <div id="cfg-seed-resultado" class="resultado-container mt-16"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT — AÇÕES DAS FERRAMENTAS
+     ═══════════════════════════════════════════════════════════ -->
+<?!= include('JS') ?>
+
+<script>
+/* ── Inicialização ──────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+  // Carregar turmas nos selects que precisam
+  carregarTurmas('relatorio-turma');
+  carregarTurmas('pauta-turma');
+  carregarTurmas('pei-turma');
+});
+
+/* ── Gerar Questões (requer seleção no Docs) ────────────── */
+function abrirFerramenta(nome) {
+  if (nome === 'questoes') {
+    chamarServidor('gerarQuestoesDaSelecaoHTML', [],
+      function(res) {
+        if (res && res.sucesso) {
+          mostrarToast('Questões inseridas no documento!', 'sucesso');
+        } else {
+          mostrarToast(res.mensagem || 'Selecione um trecho de texto primeiro.', 'erro');
+        }
+      },
+      '🧠 Gerando questões com IA...'
+    );
+  }
+}
+
+/* ── Plano de Aula ──────────────────────────────────────── */
+function enviarPlano() {
+  if (!validarCampos('form-plano')) return;
+  var dados = {
+    componente:       document.getElementById('plano-componente').value,
+    ano:              document.getElementById('plano-ano').value,
+    turma:            document.getElementById('plano-turma').value,
+    codigoHabilidade: document.getElementById('plano-bncc').value.toUpperCase(),
+    tema:             document.getElementById('plano-tema').value,
+    duracao:          parseInt(document.getElementById('plano-duracao').value) || 1,
+    isEJA:            document.getElementById('plano-ano').value.toUpperCase().indexOf('EJA') >= 0,
+    possuiNEE:        document.getElementById('plano-nee').checked,
+    recursos:         obterCheckboxesMarcados('plano-recursos')
+  };
+  chamarServidor('gerarPlanoDeAulaHTML', [dados],
+    function(res) {
+      mostrarResultado('resultado-plano', 'Plano de Aula Gerado!', res.url,
+        'O plano foi salvo na pasta 01_PLANEJAMENTO do Drive.');
+    },
+    '📝 Gerando plano de aula com IA...'
+  );
+}
+
+/* ── Corrigir Selecionado ───────────────────────────────── */
+function enviarCorrecao() {
+  if (!validarCampos('form-corrigir')) return;
+  var dados = {
+    enunciado: document.getElementById('corrigir-enunciado').value,
+    codigoBNCC: document.getElementById('corrigir-bncc').value.toUpperCase()
+  };
+  chamarServidor('corrigirSelecionadoHTML', [dados],
+    function(res) {
+      if (res && res.sucesso) {
+        var info = '<strong>Nota sugerida:</strong> ' + escapeHtml(String(res.nota)) + '/10<br>' +
+                   '<strong>Feedback:</strong> ' + escapeHtml(res.feedback) +
+                   '<br><br>⚠️ <em>Avaliação inserida no documento. Requer revisão humana.</em>';
+        var container = document.getElementById('resultado-corrigir');
+        container.innerHTML = '<div class="resultado"><h3>✅ Correção Realizada</h3>' + info + '</div>';
+      } else {
+        mostrarResultadoErro('resultado-corrigir', res.mensagem || 'Selecione a resposta do aluno no documento.');
+      }
+    },
+    '✅ Avaliando resposta com IA...'
+  );
+}
+
+/* ── Adaptar para NEE/EJA ───────────────────────────────── */
+function enviarAdaptacao() {
+  var tipo = obterRadioSelecionado('adaptar-tipo');
+  if (!tipo) { mostrarToast('Selecione o tipo de adaptação.', 'erro'); return; }
+  chamarServidor('adaptarParaNEEHTML', [tipo],
+    function(res) {
+      if (res && res.sucesso) {
+        mostrarToast('Conteúdo adaptado inserido no documento!', 'sucesso');
+        var container = document.getElementById('resultado-adaptar');
+        container.innerHTML = '<div class="resultado"><h3>✅ Adaptação Concluída</h3>' +
+          '<p class="resultado-info">A versão adaptada foi inserida ao final do documento.</p></div>';
+      } else {
+        mostrarResultadoErro('resultado-adaptar', res.mensagem || 'Selecione o conteúdo a adaptar no documento.');
+      }
+    },
+    '♿ Adaptando conteúdo com IA...'
+  );
+}
+
+/* ── Relatório da Turma ─────────────────────────────────── */
+function enviarRelatorio() {
+  if (!validarCampos('form-relatorio')) return;
+  var turma       = document.getElementById('relatorio-turma').value;
+  var componente  = document.getElementById('relatorio-componente').value;
+  var bimestre    = document.getElementById('relatorio-bimestre').value;
+  chamarServidor('gerarRelatorioTurmaHTML', [turma, componente, bimestre],
+    function(res) {
+      mostrarResultado('resultado-relatorio', 'Relatório Gerado!', res.url,
+        'Versão pública (anônima) e versão do professor geradas na pasta 03_RESULTADOS.');
+    },
+    '📊 Gerando relatório da turma...'
+  );
+}
+
+/* ── Comunicado para Família ────────────────────────────── */
+function enviarComunicado() {
+  if (!validarCampos('form-comunicado')) return;
+  var motivo = document.getElementById('comunicado-motivo').value;
+  chamarServidor('redigirComunicadoFamiliaHTML', [motivo],
+    function(res) {
+      mostrarResultado('resultado-comunicado', 'Comunicado Gerado!', res.url,
+        'O comunicado foi salvo como documento no Drive.');
+    },
+    '📧 Redigindo comunicado com IA...'
+  );
+}
+
+/* ── Diagnóstico Formativo ──────────────────────────────── */
+function enviarDiagnostico() {
+  if (!validarCampos('form-diagnostico')) return;
+  var componente = document.getElementById('diag-componente').value;
+  var ano        = document.getElementById('diag-ano').value;
+  var bncc       = document.getElementById('diag-bncc').value.toUpperCase();
+  chamarServidor('criarDiagnosticoFormativoHTML', [componente, ano, bncc],
+    function(res) {
+      mostrarResultado('resultado-diagnostico', 'Diagnóstico Gerado!', res.url,
+        'Documento com 5 questões diagnósticas criado no Drive.');
+    },
+    '🎯 Criando diagnóstico formativo...'
+  );
+}
+
+/* ── Pauta de Conselho ──────────────────────────────────── */
+function enviarPauta() {
+  if (!validarCampos('form-pauta')) return;
+  var turma    = document.getElementById('pauta-turma').value;
+  var bimestre = document.getElementById('pauta-bimestre').value;
+  chamarServidor('gerarPautaReuniaoHTML', [turma, bimestre],
+    function(res) {
+      mostrarResultado('resultado-pauta', 'Pauta Criada!', res.url,
+        'Documento de pauta salvo no Drive.');
+    },
+    '📋 Gerando pauta do conselho...'
+  );
+}
+
+/* ── Gerar PEI/PDI ──────────────────────────────────────── */
+function enviarPEI() {
+  if (!validarCampos('form-pei')) return;
+  var componentes = obterCheckboxesMarcados('pei-componentes');
+  var turma = document.getElementById('pei-turma').value;
+  var dados = {
+    nomeCompleto: document.getElementById('pei-nome').value,
+    turma:        turma,
+    tipoNEE:      document.getElementById('pei-tipo').value,
+    componentes:  componentes.length > 0 ? componentes : ['Todos'],
+    segmento:     turma.toUpperCase().indexOf('EJA') >= 0 ? 'EJA Segmento II' : 'EF II',
+    isEJA:        turma.toUpperCase().indexOf('EJA') >= 0
+  };
+  chamarServidor('gerarPEIHTML', [dados],
+    function(res) {
+      mostrarResultado('resultado-pei', 'PEI Gerado!', res.url,
+        'Documento salvo em 04_ALUNOS/PEI_PDI/ (acesso restrito — LGPD).');
+    },
+    '📝 Gerando PEI com IA...'
+  );
+}
+
+/* ── Prova Digital ──────────────────────────────────────── */
+function enviarProva() {
+  if (!validarCampos('form-prova')) return;
+  var idGabarito = document.getElementById('prova-gabarito').value;
+  var prazo      = document.getElementById('prova-prazo').value || null;
+  chamarServidor('criarProvaDigitalHTML', [idGabarito, prazo],
+    function(res) {
+      var info = '📋 <strong>URL para alunos:</strong> <a href="' + escapeHtml(res.urlForm) +
+                 '" target="_blank">' + escapeHtml(res.urlForm) + '</a>' +
+                 '<br>✏️ <strong>URL para editar:</strong> <a href="' + escapeHtml(res.urlEditar) +
+                 '" target="_blank">' + escapeHtml(res.urlEditar) + '</a>' +
+                 '<br><br>Compartilhe o link com os alunos via Google Classroom ou WhatsApp.';
+      var container = document.getElementById('resultado-prova');
+      container.innerHTML = '<div class="resultado"><h3>✅ Prova Digital Criada!</h3>' + info +
+        '<div class="mt-8"><button class="btn-copiar btn btn-sm" onclick="copiarTexto(\'' +
+        escapeHtml(res.urlForm) + '\')">📋 Copiar link dos alunos</button></div></div>';
+    },
+    '📄 Criando prova digital no Google Forms...'
+  );
+}
+
+/* ── Corrigir Lote ──────────────────────────────────────── */
+function enviarLote() {
+  if (!validarCampos('form-lote')) return;
+  var pastaId   = document.getElementById('lote-pasta').value;
+  var enunciado = document.getElementById('lote-enunciado').value;
+  var bncc      = document.getElementById('lote-bncc').value.toUpperCase();
+  chamarServidor('corrigirLoteHTML', [pastaId, enunciado, bncc],
+    function(res) {
+      var info = '<strong>' + res.totalCorrigidos + '</strong> redações corrigidas<br>' +
+                 '<strong>' + res.totalErros + '</strong> erros' +
+                 '<br><br>⚠️ <em>TODAS as notas são SUGESTÕES e requerem validação do professor.</em>';
+      if (res.urlRelatorio) {
+        info += '<br><br>📄 <a href="' + escapeHtml(res.urlRelatorio) +
+                '" target="_blank">Ver relatório</a>';
+      }
+      var container = document.getElementById('resultado-lote');
+      container.innerHTML = '<div class="resultado"><h3>✅ Correção em Lote Concluída!</h3>' + info + '</div>';
+    },
+    '📚 Corrigindo redações em lote...\nIsso pode levar alguns minutos.'
+  );
+}
+
+/* ── Diagnóstico do Sistema ─────────────────────────────── */
+function executarDiagnostico() {
+  chamarServidor('executarDiagnosticoHTML', [],
+    function(res) {
+      var statusGeral = res.resumo.critico > 0 ? '🔴 CRÍTICO' :
+                        res.resumo.atencao > 0 ? '🟡 ATENÇÃO' : '🟢 OK';
+      var html = '<div class="resultado">' +
+        '<h3>' + statusGeral + ' — Diagnóstico do Sistema</h3>' +
+        '<div class="resumo-bar" style="padding:8px 0;gap:16px;background:transparent;border:none;">' +
+        '<span class="resumo-badge"><span class="semaforo semaforo-ok"></span> OK: ' + res.resumo.ok + '</span>' +
+        '<span class="resumo-badge"><span class="semaforo semaforo-atencao"></span> Atenção: ' + res.resumo.atencao + '</span>' +
+        '<span class="resumo-badge"><span class="semaforo semaforo-critico"></span> Crítico: ' + res.resumo.critico + '</span>' +
+        '</div>';
+
+      html += '<div class="diagnostico-card"><strong>Checklist Técnico</strong>';
+      for (var chave in res.tecnico) {
+        var item = res.tecnico[chave];
+        var cls = item.status === 'OK' ? 'ok' : item.status === 'ATENCAO' ? 'atencao' : 'critico';
+        html += '<div class="item"><span class="semaforo semaforo-' + cls + '"></span>' +
+                '<strong>' + escapeHtml(chave) + '</strong>' +
+                '<span class="item-msg">' + escapeHtml(item.mensagem) + '</span></div>';
+      }
+      html += '</div>';
+
+      html += '<div class="diagnostico-card"><strong>Checklist Pedagógico</strong>';
+      for (var chave2 in res.pedagogico) {
+        var item2 = res.pedagogico[chave2];
+        var cls2 = item2.status === 'OK' ? 'ok' : item2.status === 'ATENCAO' ? 'atencao' : 'critico';
+        html += '<div class="item"><span class="semaforo semaforo-' + cls2 + '"></span>' +
+                '<strong>' + escapeHtml(chave2) + '</strong>' +
+                '<span class="item-msg">' + escapeHtml(item2.mensagem) + '</span></div>';
+      }
+      html += '</div></div>';
+
+      document.getElementById('resultado-sistema').innerHTML = html;
+    },
+    '🔍 Executando diagnóstico do sistema...'
+  );
+}
+
+/* ── Abrir Pasta ────────────────────────────────────────── */
+function abrirPasta() {
+  chamarServidor('obterUrlPastaHTML', [],
+    function(url) {
+      if (url) window.open(url, '_blank');
+      else mostrarToast('Pasta não configurada. Execute o Setup.', 'erro');
+    },
+    'Abrindo pasta...'
+  );
+}
+
+/* ══ CONFIGURAÇÕES ═══════════════════════════════════════════ */
+
+/* Carregar status ao entrar na página ---------------------------*/
+document.addEventListener('DOMContentLoaded', function() {
+  var pgConfig = document.getElementById('pg-configuracoes');
+  if (pgConfig) {
+    var observer = new MutationObserver(function(muts) {
+      muts.forEach(function(m) {
+        if (m.type === 'attributes' && m.attributeName === 'class') {
+          if (!pgConfig.classList.contains('oculto')) {
+            _carregarStatusConfig();
+          }
+        }
+      });
+    });
+    observer.observe(pgConfig, { attributes: true });
+  }
+});
+
+function _carregarStatusConfig() {
+  var box = document.getElementById('config-status-box');
+  if (!box) return;
+  box.innerHTML = '<em>⏳ Verificando configurações...</em>';
+  chamarServidor('obterStatusConfiguracaoHTML', [],
+    function(s) {
+      if (!s) { box.innerHTML = '<em>Não foi possível verificar.</em>'; return; }
+      var icon = function(ok) { return ok ? '✅' : '❌'; };
+      box.innerHTML =
+        icon(s.geminiKey)          + ' Chave Gemini<br>' +
+        icon(s.emailCoordenacao)   + ' E-mail Coordenação<br>' +
+        icon(s.emailDirecao)       + ' E-mail Direção<br>' +
+        icon(s.pastasConfiguradas) + ' Pastas no Drive<br>' +
+        icon(s.planilhaBNCC)       + ' Planilha MASTER_BNCC<br>' +
+        icon(s.planilhaTurmas)     + ' Planilha TURMAS_ALUNOS<br>' +
+        '📚 BNCC: <strong>' + s.bnccCount + '</strong> habilidade(s) &nbsp;|&nbsp; ' +
+        '👥 Turmas ativas: <strong>' + s.turmasCount + '</strong>';
+    }
+  );
+}
+
+function salvarConfig() {
+  var dados = {
+    geminiKey:         document.getElementById('cfg-gemini').value,
+    emailCoordenacao:  document.getElementById('cfg-email-coord').value,
+    emailDirecao:      document.getElementById('cfg-email-dir').value,
+    emailSecretaria:   document.getElementById('cfg-email-sec').value
+  };
+  if (!dados.geminiKey && !dados.emailCoordenacao && !dados.emailDirecao) {
+    mostrarToast('Preencha pelo menos um campo antes de salvar.', 'aviso');
+    return;
+  }
+  chamarServidor('salvarConfiguracoesHTML', [dados],
+    function(res) {
+      document.getElementById('cfg-resultado').innerHTML =
+        '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+        (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+      if (res.sucesso) {
+        document.getElementById('cfg-gemini').value = '';
+        setTimeout(_carregarStatusConfig, 600);
+      }
+    },
+    '💾 Salvando configurações...'
+  );
+}
+
+function testarGeminiConexao() {
+  var box = document.getElementById('cfg-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Testando conexão com Gemini...</div>';
+  chamarServidor('testarGeminiHTML', [],
+    function(res) {
+      box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+        (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    }
+  );
+}
+
+function popularBNCCCatalogo() {
+  var box = document.getElementById('cfg-seed-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Populando catálogo BNCC...</div>';
+  chamarServidor('popularBNCCHTML', [],
+    function(res) {
+      box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+        (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+      if (res.sucesso) setTimeout(_carregarStatusConfig, 600);
+    }
+  );
+}
+
+function popularTestData() {
+  var box = document.getElementById('cfg-seed-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Inserindo dados de teste...</div>';
+  chamarServidor('popularDadosTesteHTML', [],
+    function(res) {
+      box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+        (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+      if (res.sucesso) setTimeout(_carregarStatusConfig, 600);
+    }
+  );
+}
+
+function limparTestData() {
+  if (!confirm('Remover TODOS os dados de teste (turmas 7A, 8A, 9A e alunos TESTE_)?')) return;
+  var box = document.getElementById('cfg-seed-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Removendo dados de teste...</div>';
+  chamarServidor('limparDadosTesteHTML', [],
+    function(res) {
+      box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+        (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+      if (res.sucesso) setTimeout(_carregarStatusConfig, 600);
+    }
+  );
+}
+
+/* ══ FREQUÊNCIA ═══════════════════════════════════════════════ */
+
+/* Observadores de página para inicialização automática */
+document.addEventListener('DOMContentLoaded', function() {
+  var pgFreq = document.getElementById('pg-frequencia');
+  if (pgFreq) {
+    new MutationObserver(function(muts) {
+      muts.forEach(function(m) {
+        if (m.attributeName === 'class' && !pgFreq.classList.contains('oculto')) {
+          _inicializarPaginaFrequencia();
+        }
+      });
+    }).observe(pgFreq, { attributes: true });
+  }
+  var pgMat = document.getElementById('pg-matricula');
+  if (pgMat) {
+    new MutationObserver(function(muts) {
+      muts.forEach(function(m) {
+        if (m.attributeName === 'class' && !pgMat.classList.contains('oculto')) {
+          _inicializarPaginaMatricula();
+        }
+      });
+    }).observe(pgMat, { attributes: true });
+  }
+});
+
+function _inicializarPaginaFrequencia() {
+  var dataInput = document.getElementById('freq-data');
+  if (dataInput && !dataInput.value) {
+    var hoje = new Date();
+    var yyyy = hoje.getFullYear();
+    var mm = String(hoje.getMonth() + 1).padStart(2, '0');
+    var dd = String(hoje.getDate()).padStart(2, '0');
+    dataInput.value = yyyy + '-' + mm + '-' + dd;
+  }
+  carregarTurmas('freq-turma');
+}
+
+function _inicializarPaginaMatricula() {
+  carregarTurmas('mat-turma');
+}
+
+function carregarAlunosTurma() {
+  var turma = document.getElementById('freq-turma').value;
+  if (!turma) return;
+  document.getElementById('freq-turma-label').textContent = turma;
+  var container = document.getElementById('freq-lista-container');
+  var lista = document.getElementById('freq-lista');
+  lista.innerHTML = '<div style="text-align:center;color:var(--cor-texto-muted);padding:12px;">⏳ Carregando alunos...</div>';
+  container.style.display = 'block';
+  chamarServidor('listarAlunosTurmaHTML', [turma],
+    function(alunos) {
+      if (!alunos || alunos.length === 0) {
+        lista.innerHTML = '<p class="text-muted" style="text-align:center;padding:12px;">Nenhum aluno ativo nesta turma.</p>';
+        return;
+      }
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        '<thead><tr style="background:var(--cor-fundo);">' +
+        '<th style="text-align:left;padding:6px 4px;border-bottom:1px solid var(--cor-borda);">Aluno</th>' +
+        '<th style="text-align:center;padding:6px 4px;border-bottom:1px solid var(--cor-borda);">P</th>' +
+        '<th style="text-align:center;padding:6px 4px;border-bottom:1px solid var(--cor-borda);">F</th>' +
+        '</tr></thead><tbody>';
+      alunos.forEach(function(a, i) {
+        var neeTag = a.possuiNEE ? ' <span style="color:var(--cor-primaria);font-size:10px;">[NEE]</span>' : '';
+        html += '<tr>' +
+          '<td style="padding:6px 4px;">' + escapeHtml(a.nome) + neeTag + '</td>' +
+          '<td style="text-align:center;padding:6px 4px;"><input type="radio" name="freq-' + i +
+          '" value="P" id="freq-p-' + i + '" style="accent-color:green;" checked></td>' +
+          '<td style="text-align:center;padding:6px 4px;"><input type="radio" name="freq-' + i +
+          '" value="F" id="freq-f-' + i + '" style="accent-color:var(--cor-erro);"></td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      lista.innerHTML = html;
+      lista.dataset.alunos = JSON.stringify(alunos.map(function(a) { return a.nome; }));
+    },
+    'Carregando alunos...'
+  );
+}
+
+function marcarTodosPresente() {
+  document.querySelectorAll('#freq-lista input[type="radio"][value="P"]').forEach(function(r) { r.checked = true; });
+}
+
+function marcarTodosFalta() {
+  document.querySelectorAll('#freq-lista input[type="radio"][value="F"]').forEach(function(r) { r.checked = true; });
+}
+
+function registrarChamada() {
+  var turma = document.getElementById('freq-turma').value;
+  var dataInput = document.getElementById('freq-data').value;
+  var componente = document.getElementById('freq-componente').value;
+  var lista = document.getElementById('freq-lista');
+  if (!turma) { mostrarToast('Selecione uma turma.', 'erro'); return; }
+  if (!dataInput) { mostrarToast('Informe a data da chamada.', 'erro'); return; }
+  if (!lista.dataset.alunos) { mostrarToast('Carregue os alunos antes de registrar.', 'erro'); return; }
+
+  // Converter YYYY-MM-DD → dd/MM/yyyy
+  var p = dataInput.split('-');
+  var dataFormatada = p[2] + '/' + p[1] + '/' + p[0];
+
+  var nomes = JSON.parse(lista.dataset.alunos);
+  var registros = nomes.map(function(nome, i) {
+    var radioP = document.getElementById('freq-p-' + i);
+    return { nome: nome, presenca: (radioP && radioP.checked) ? 'P' : 'F' };
+  });
+
+  chamarServidor('lancarFrequenciaLoteHTML', [turma, dataFormatada, componente, registros],
+    function(res) {
+      var container = document.getElementById('resultado-freq');
+      if (res.sucesso) {
+        var alertaMsg = res.alertas > 0
+          ? '<br>⚠️ <strong>' + res.alertas + '</strong> aluno(s) em alerta de faltas — e-mail enviado à coordenação.'
+          : '';
+        container.innerHTML = '<div class="resultado">✅ Chamada registrada: <strong>' +
+          res.processados + '</strong> aluno(s) em ' + escapeHtml(dataFormatada) + alertaMsg + '</div>';
+      } else {
+        container.innerHTML = '<div class="resultado resultado-erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      }
+    },
+    '💾 Registrando chamada...'
+  );
+}
+
+function gerarFormChamada() {
+  var turma = document.getElementById('freq-turma').value;
+  if (!turma) { mostrarToast('Selecione uma turma antes de gerar o formulário.', 'erro'); return; }
+  chamarServidor('gerarChamadaFormHTML', [turma],
+    function(res) {
+      var container = document.getElementById('resultado-form-chamada');
+      if (res.sucesso) {
+        container.innerHTML = '<div class="resultado">✅ Form criado!<br>' +
+          '<a href="' + escapeHtml(res.url) + '" target="_blank">📋 Abrir formulário</a>' +
+          '<div class="mt-8"><button class="btn btn-sm" onclick="copiarTexto(\'' +
+          escapeHtml(res.url) + '\')">📋 Copiar link</button></div></div>';
+      } else {
+        container.innerHTML = '<div class="resultado resultado-erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      }
+    },
+    '📋 Criando formulário de chamada no Google Forms...'
+  );
+}
+
+function verResumoFaltas() {
+  var turma = document.getElementById('freq-turma').value;
+  if (!turma) { mostrarToast('Selecione uma turma para ver o resumo.', 'erro'); return; }
+  chamarServidor('buscarFrequenciasResumoHTML', [turma],
+    function(res) {
+      var container = document.getElementById('freq-resumo');
+      if (!res || !res.alunos || res.alunos.length === 0) {
+        container.innerHTML = '<div class="resultado">Sem registros de frequência para esta turma.</div>';
+        return;
+      }
+      var html = '<div class="resultado"><strong>Resumo — ' + escapeHtml(turma) + '</strong>' +
+        '<div style="font-size:11px;color:var(--cor-texto-muted);margin-bottom:8px;">' +
+        'Alerta ≥ ' + Math.round(res.limiteAlerta * 100) + '% &nbsp;|&nbsp; ' +
+        'Crítico ≥ ' + Math.round(res.limiteCritico * 100) + '%</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        '<thead><tr style="background:var(--cor-fundo);">' +
+        '<th style="text-align:left;padding:4px 6px;">Aluno</th>' +
+        '<th style="text-align:center;padding:4px;">Faltas</th>' +
+        '<th style="text-align:center;padding:4px;">%</th>' +
+        '</tr></thead><tbody>';
+      res.alunos.forEach(function(a) {
+        var cor = a.nivel === 'critico' ? '#ffebee' : a.nivel === 'atencao' ? '#fff8e1' : 'transparent';
+        var emoj = a.nivel === 'critico' ? '🔴 ' : a.nivel === 'atencao' ? '🟡 ' : '🟢 ';
+        html += '<tr style="background:' + cor + ';">' +
+          '<td style="padding:4px 6px;">' + emoj + escapeHtml(a.nomeAluno) + '</td>' +
+          '<td style="text-align:center;padding:4px;">' + a.totalFaltas + '/' + a.totalAulas + '</td>' +
+          '<td style="text-align:center;padding:4px;font-weight:' + (a.nivel !== 'ok' ? 'bold' : 'normal') + ';">' +
+          a.pctFormatado + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    },
+    '📊 Carregando resumo de faltas...'
+  );
+}
+
+/* ══ MATRÍCULA ═══════════════════════════════════════════════ */
+
+function atualizarCamposEJA() {
+  var turma = document.getElementById('mat-turma').value;
+  var camposEJA = document.getElementById('campos-eja');
+  var segSelect = document.getElementById('mat-segmento');
+  var isEJA = turma && turma.toUpperCase().includes('EJA');
+  if (camposEJA) camposEJA.style.display = isEJA ? 'block' : 'none';
+  if (segSelect && isEJA) segSelect.value = 'EJA Segmento II';
+}
+
+function toggleNEEFields() {
+  var chk = document.getElementById('mat-nee');
+  var campos = document.getElementById('campos-nee');
+  if (campos) campos.style.display = chk.checked ? 'block' : 'none';
+}
+
+function submeterMatricula() {
+  if (!validarCampos('form-matricula')) return;
+  var dados = {
+    nomeCompleto:            document.getElementById('mat-nome').value.trim(),
+    dataNascimento:          document.getElementById('mat-nascimento').value || null,
+    turma:                   document.getElementById('mat-turma').value,
+    turno:                   document.getElementById('mat-turno').value,
+    segmento:                document.getElementById('mat-segmento').value,
+    responsavel:             document.getElementById('mat-responsavel').value.trim(),
+    contatoWhatsApp:         document.getElementById('mat-whatsapp').value.trim(),
+    emailResponsavel:        document.getElementById('mat-email').value.trim(),
+    possuiNEE:               document.getElementById('mat-nee').checked,
+    tipoNEE:                 document.getElementById('mat-tipo-nee').value,
+    laudoMedico:             document.getElementById('mat-laudo').checked,
+    requerPEI:               document.getElementById('mat-pei').checked,
+    observacoesPedagogicas:  document.getElementById('mat-obs').value.trim(),
+    faixaEtariaEJA:          document.getElementById('mat-faixa-eja').value,
+    escolaridadeAnteriorEJA: document.getElementById('mat-esc-anterior-eja').value.trim(),
+    motivacaoRetornoEJA:     document.getElementById('mat-motivacao-eja').value.trim(),
+    turnoTrabalhoEJA:        document.getElementById('mat-turno-trab-eja').value
+  };
+  chamarServidor('matricularAlunoHTML', [dados],
+    function(res) {
+      var container = document.getElementById('resultado-matricula');
+      if (res.sucesso) {
+        container.innerHTML = '<div class="resultado">✅ Aluno matriculado com sucesso!<br>' +
+          'ID de Matrícula: <strong>' + escapeHtml(res.id) + '</strong></div>';
+        // Limpar formulário após matrícula bem-sucedida
+        document.getElementById('mat-nome').value = '';
+        document.getElementById('mat-nascimento').value = '';
+        document.getElementById('mat-responsavel').value = '';
+        document.getElementById('mat-whatsapp').value = '';
+        document.getElementById('mat-email').value = '';
+        document.getElementById('mat-obs').value = '';
+        document.getElementById('mat-nee').checked = false;
+        toggleNEEFields();
+      } else {
+        container.innerHTML = '<div class="resultado resultado-erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      }
+    },
+    '👤 Matriculando aluno...'
+  );
+}
+</script>
+
+</body>
+</html>

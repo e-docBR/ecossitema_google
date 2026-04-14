@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <?!= include('CSS') ?>
+</head>
+<body style="background:#fff;">
+
+<!-- Cabeçalho -->
+<div class="header-modal">
+  <h1>🔍 Diagnóstico do Sistema</h1>
+  <small>PEDAGOGO.AI — Verificação de Saúde</small>
+</div>
+
+<!-- Loading -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-msg" class="loading-msg">Executando diagnóstico...</div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Barra de resumo -->
+<div id="resumo-bar" class="resumo-bar oculto">
+  <span class="resumo-badge"><span class="semaforo semaforo-ok"></span> OK: <span id="count-ok">0</span></span>
+  <span class="resumo-badge"><span class="semaforo semaforo-atencao"></span> Atenção: <span id="count-atencao">0</span></span>
+  <span class="resumo-badge"><span class="semaforo semaforo-critico"></span> Crítico: <span id="count-critico">0</span></span>
+</div>
+
+<!-- Conteúdo principal -->
+<div class="modal-body" id="conteudo">
+  <div class="text-center text-muted" style="padding:40px 0;">
+    <div class="spinner" style="margin:0 auto 16px;"></div>
+    <p>Executando verificações...</p>
+  </div>
+</div>
+
+<!-- Rodapé -->
+<div class="modal-footer">
+  <button class="btn btn-secondary btn-sm" onclick="google.script.host.close()">Fechar</button>
+  <button class="btn btn-primary btn-sm" id="btn-reexecutar" onclick="executar()">🔄 Reexecutar</button>
+</div>
+
+<?!= include('JS') ?>
+
+<script>
+function executar() {
+  var conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = '<div class="text-center text-muted" style="padding:40px 0;">' +
+    '<div class="spinner" style="margin:0 auto 16px;"></div><p>Executando verificações...</p></div>';
+  document.getElementById('resumo-bar').classList.add('oculto');
+
+  google.script.run
+    .withSuccessHandler(renderizar)
+    .withFailureHandler(function(e) {
+      conteudo.innerHTML = '<div class="resultado resultado-erro" style="margin:20px;">' +
+        '<h3>❌ Erro no Diagnóstico</h3><p>' + escapeHtml(e.message) + '</p></div>';
+    })
+    .executarDiagnosticoHTML();
+}
+
+function renderizar(rel) {
+  // Resumo
+  document.getElementById('count-ok').textContent = rel.resumo.ok;
+  document.getElementById('count-atencao').textContent = rel.resumo.atencao;
+  document.getElementById('count-critico').textContent = rel.resumo.critico;
+  document.getElementById('resumo-bar').classList.remove('oculto');
+
+  var html = '';
+
+  // Status geral
+  var statusGeral = rel.resumo.critico > 0 ? '🔴 Sistema com problemas críticos' :
+                    rel.resumo.atencao > 0 ? '🟡 Sistema com itens de atenção' :
+                    '🟢 Sistema funcionando normalmente';
+  html += '<div style="text-align:center;font-size:14px;font-weight:500;padding:12px 0;margin-bottom:8px;">' +
+          statusGeral + '</div>';
+
+  // Checklist Técnico
+  html += '<div class="diagnostico-card"><div style="font-weight:500;margin-bottom:8px;">⚙️ Checklist Técnico</div>';
+  for (var chave in rel.tecnico) {
+    html += renderItem(chave, rel.tecnico[chave]);
+  }
+  html += '</div>';
+
+  // Checklist Pedagógico
+  html += '<div class="diagnostico-card"><div style="font-weight:500;margin-bottom:8px;">📚 Checklist Pedagógico</div>';
+  for (var chave2 in rel.pedagogico) {
+    html += renderItem(chave2, rel.pedagogico[chave2]);
+  }
+  html += '</div>';
+
+  // Data
+  html += '<div class="text-center text-muted mt-8">Diagnóstico executado em: ' + escapeHtml(rel.data) + '</div>';
+
+  document.getElementById('conteudo').innerHTML = html;
+}
+
+function renderItem(chave, item) {
+  var cls = item.status === 'OK' ? 'ok' : item.status === 'ATENCAO' ? 'atencao' : 'critico';
+  var emoji = item.status === 'OK' ? '✅' : item.status === 'ATENCAO' ? '⚠️' : '🚨';
+  return '<div class="item">' +
+    '<span class="semaforo semaforo-' + cls + '"></span>' +
+    '<strong style="min-width:140px;">' + formatarChave(chave) + '</strong>' +
+    '<span class="item-msg">' + escapeHtml(item.mensagem) + '</span></div>';
+}
+
+function formatarChave(chave) {
+  return chave
+    .replace(/_/g, ' ')
+    .replace(/planilha /i, '📊 ')
+    .replace(/pasta /i, '📁 ')
+    .replace(/geminiAPI/i, '🤖 Gemini API')
+    .replace(/backup/i, '💾 Backup')
+    .replace(/bancoQuestoes/i, '🧠 Banco de Questões')
+    .replace(/turmasCadastradas/i, '🏫 Turmas')
+    .replace(/alunosNEE/i, '♿ Alunos NEE');
+}
+
+// Executar ao abrir
+document.addEventListener('DOMContentLoaded', executar);
+</script>
+
+</body>
+</html>

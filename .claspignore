@@ -1,0 +1,5 @@
+# Com rootDir:"src" o clasp já só envia arquivos dentro de src/.
+# Este arquivo bloqueia apenas o que não deve ir ao Apps Script.
+node_modules/
+**/*.md
+

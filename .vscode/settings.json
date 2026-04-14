@@ -1,0 +1,46 @@
+{
+  // Associar .gs ao modo JavaScript para syntax highlight e IntelliSense
+  "files.associations": {
+    "*.gs": "javascript"
+  },
+
+  // Configurações do editor para .gs
+  "[javascript]": {
+    "editor.formatOnSave": false,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // IntelliSense com @types/google-apps-script
+  "javascript.suggest.autoImports": false,
+  "javascript.validate.enable": true,
+  "jsconfig.json": true,
+
+  // Excluir node_modules da busca e do explorer
+  "files.exclude": {
+    "node_modules": true
+  },
+  "search.exclude": {
+    "node_modules": true,
+    ".git": true
+  },
+
+  // Mostrar arquivos ocultos importantes no Explorer
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json":   "package-lock.json, node_modules",
+    ".clasp.json":    ".claspignore",
+    "jsconfig.json":  "tsconfig.json"
+  },
+
+  // Salvar automaticamente ao perder foco (opcional — não faz push automático)
+  "files.autoSave": "onFocusChange",
+
+  // Terminal padrão: bash
+  "terminal.integrated.defaultProfile.linux": "bash",
+
+  // Destacar o arquivo ativo no Explorer
+  "explorer.autoReveal": true,
+  "remote.autoForwardPortsFallback": 0
+}

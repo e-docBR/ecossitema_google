@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1a73e8">
+  <title>PEDAGOGO.AI — Gestão Pedagógica</title>
+
+  <!-- Fontes Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <?!= include('CSS') ?>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       WEBAPP OVERRIDES — Layout de tela cheia
+       ═══════════════════════════════════════════════════════ */
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      height: 56px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    .topbar-brand .logo { font-size: 24px; }
+    .topbar-brand .subtitle { font-size: 11px; opacity: .8; display: block; font-weight: 400; }
+    .topbar-user {
+      font-size: 12px;
+      opacity: .85;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* LAYOUT PRINCIPAL */
+    .app-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR-NAV */
+    .nav-rail {
+      width: 220px;
+      background: #fff;
+      border-right: 1px solid var(--cor-borda);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 8px 0;
+    }
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9aa0a6;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      padding: 14px 18px 4px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #3c4043;
+      border-radius: 0;
+      transition: background .15s, color .15s;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover {
+      background: #f1f3f4;
+      color: #1a73e8;
+    }
+    .nav-item.ativo {
+      background: #e8f0fe;
+      color: #1a73e8;
+      font-weight: 500;
+      border-left-color: #1a73e8;
+    }
+    .nav-item .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+
+    /* CONTEÚDO PRINCIPAL */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      background: #f8f9fa;
+    }
+
+    /* PÁGINA VISIBLE */
+    .pagina-webapp {
+      display: none;
+      padding: 24px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .pagina-webapp.ativo { display: block; }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 400;
+      color: #202124;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-subtitle {
+      font-size: 13px;
+      color: #5f6368;
+      margin-bottom: 24px;
+    }
+
+    /* DASHBOARD CARDS */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--cor-borda);
+      border-radius: 12px;
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: var(--sombra-card);
+    }
+    .stat-card .stat-icon { font-size: 28px; margin-bottom: 4px; }
+    .stat-card .stat-valor { font-size: 28px; font-weight: 700; color: #1a73e8; line-height: 1; }
+    .stat-card .stat-label { font-size: 12px; color: #5f6368; }
+    .stat-card.ok    { border-top: 3px solid #34a853; }
+    .stat-card.warn  { border-top: 3px solid #f9ab00; }
+    .stat-card.erro  { border-top: 3px solid #d93025; }
+
+    /* CARDS DE FERRAMENTA (webapp) */
+    .ferramentas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .ferramenta-card {
+      background: #fff;
+      border: 1px solid var(--cor-borda);
+      border-radius: 12px;
+      padding: 20px 16px;
+      cursor: pointer;
+      transition: box-shadow .2s, border-color .2s, transform .15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+    .ferramenta-card:hover {
+      border-color: #1a73e8;
+      box-shadow: 0 4px 12px rgba(26,115,232,.15);
+      transform: translateY(-2px);
+    }
+    .ferramenta-card .fc-icon { font-size: 36px; }
+    .ferramenta-card .fc-title { font-size: 13px; font-weight: 500; color: #202124; line-height: 1.3; }
+    .ferramenta-card .fc-desc  { font-size: 11px; color: #5f6368; }
+
+    /* FORMULÁRIOS WEBAPP */
+    .form-card {
+      background: #fff;
+      border: 1px solid var(--cor-borda);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: var(--sombra-card);
+    }
+    .form-card h3 {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #202124;
+    }
+
+    /* Grids de 2col em telas médias */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .grid-2 .campo { margin-bottom: 0; }
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .nav-rail { width: 56px; }
+      .nav-item .nav-label { display: none; }
+      .nav-section-label { display: none; }
+      .pagina-webapp { padding: 16px; }
+      .topbar-brand .subtitle { display: none; }
+      .dashboard-grid { grid-template-columns: 1fr 1fr; }
+      .ferramentas-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* RESULTADO WEBAPP */
+    .resultado-webapp {
+      background: #e6f4ea;
+      border: 1px solid #34a853;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .resultado-webapp.erro {
+      background: #fce8e6;
+      border-color: #d93025;
+    }
+    .resultado-webapp pre {
+      white-space: pre-wrap;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* TABELA FREQUÊNCIA */
+    .tabela-freq {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .tabela-freq th {
+      background: #f1f3f4;
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 500;
+      border-bottom: 2px solid var(--cor-borda);
+    }
+    .tabela-freq td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    .tabela-freq tr:hover td { background: #fafafa; }
+
+    /* BADGE DE STATUS */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge-ok     { background: #e6f4ea; color: #137333; }
+    .badge-aviso  { background: #fef7e0; color: #b06000; }
+    .badge-erro   { background: #fce8e6; color: #c5221f; }
+
+    /* RADIO PRESENÇA */
+    .radio-pf { display: flex; gap: 8px; justify-content: center; }
+    .radio-pf label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; cursor: pointer;
+      padding: 3px 8px; border-radius: 4px;
+      border: 1px solid var(--cor-borda);
+      transition: background .15s;
+    }
+    .radio-pf label:has(input:checked) { font-weight: 600; }
+    .radio-pf label:first-child:has(input:checked) { background: #e6f4ea; border-color: #34a853; color: #137333; }
+    .radio-pf label:last-child:has(input:checked)  { background: #fce8e6; border-color: #d93025; color: #c5221f; }
+
+    /* CHIP/TAG */
+    .chip {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: var(--cor-primaria-clara);
+      color: var(--cor-primaria);
+      font-weight: 500;
+    }
+
+    hr.divisor { border: none; border-top: 1px solid var(--cor-borda); margin: 24px 0; }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     TOP BAR
+     ═══════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="logo">🤖</span>
+    <div>
+      PEDAGOGO.AI
+      <span class="subtitle">Colégio Municipal de Itabatan — SEME/Mucuri-BA</span>
+    </div>
+  </div>
+  <div class="topbar-user">
+    👤 <?= usuario ?>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════
+     LAYOUT
+     ═══════════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- NAV LATERAL -->
+  <nav class="nav-rail" id="nav-rail">
+
+    <div class="nav-section-label">Principal</div>
+    <a class="nav-item ativo" data-page="dashboard" onclick="irPara('dashboard')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+
+    <div class="nav-section-label">Pedagógico</div>
+    <a class="nav-item" data-page="plano" onclick="irPara('plano')">
+      <span class="nav-icon">📝</span>
+      <span class="nav-label">Plano de Aula</span>
+    </a>
+    <a class="nav-item" data-page="questoes" onclick="irPara('questoes')">
+      <span class="nav-icon">🧠</span>
+      <span class="nav-label">Gerar Questões</span>
+    </a>
+    <a class="nav-item" data-page="correcao" onclick="irPara('correcao')">
+      <span class="nav-icon">✅</span>
+      <span class="nav-label">Corrigir Discursiva</span>
+    </a>
+    <a class="nav-item" data-page="adaptar" onclick="irPara('adaptar')">
+      <span class="nav-icon">♿</span>
+      <span class="nav-label">Adaptar NEE/EJA</span>
+    </a>
+    <a class="nav-item" data-page="relatorio" onclick="irPara('relatorio')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Relatório Turma</span>
+    </a>
+    <a class="nav-item" data-page="diagnostico" onclick="irPara('diagnostico')">
+      <span class="nav-icon">🎯</span>
+      <span class="nav-label">Diagnóstico Formativo</span>
+    </a>
+    <a class="nav-item" data-page="comunicado" onclick="irPara('comunicado')">
+      <span class="nav-icon">📧</span>
+      <span class="nav-label">Comunicado Família</span>
+    </a>
+    <a class="nav-item" data-page="pauta" onclick="irPara('pauta')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Conselho de Classe</span>
+    </a>
+    <a class="nav-item" data-page="pei" onclick="irPara('pei')">
+      <span class="nav-icon">📄</span>
+      <span class="nav-label">PEI / PDI</span>
+    </a>
+    <a class="nav-item" data-page="prova" onclick="irPara('prova')">
+      <span class="nav-icon">📜</span>
+      <span class="nav-label">Prova Digital</span>
+    </a>
+    <a class="nav-item" data-page="lote" onclick="irPara('lote')">
+      <span class="nav-icon">📚</span>
+      <span class="nav-label">Corrigir Lote</span>
+    </a>
+
+    <div class="nav-section-label">Gestão Escolar</div>
+    <a class="nav-item" data-page="frequencia" onclick="irPara('frequencia')">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Frequência</span>
+    </a>
+    <a class="nav-item" data-page="matricula" onclick="irPara('matricula')">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Matricular Aluno</span>
+    </a>
+
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" data-page="configuracoes" onclick="irPara('configuracoes')">
+      <span class="nav-icon">🔧</span>
+      <span class="nav-label">Configurações</span>
+    </a>
+    <a class="nav-item" data-page="sistema" onclick="irPara('sistema')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Diagnóstico</span>
+    </a>
+  </nav>
+
+  <!-- CONTEÚDO -->
+  <main class="main-content" id="main-content">
+
+    <!-- ════════════════════════════════════════ DASHBOARD ═════ -->
+    <div class="pagina-webapp ativo" id="wa-dashboard">
+      <div class="page-title">🏠 Dashboard</div>
+      <div class="page-subtitle">Visão geral do sistema — <span id="dash-data"></span></div>
+
+      <div id="dashboard-cards" class="dashboard-grid">
+        <div class="stat-card" style="border-top:3px solid #9e9e9e;">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-valor">—</div>
+          <div class="stat-label">Carregando...</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="padding:0 0 10px;">Ferramentas Rápidas</div>
+      <div class="ferramentas-grid">
+        <div class="ferramenta-card" onclick="irPara('plano')">
+          <div class="fc-icon">📝</div>
+          <div class="fc-title">Plano de Aula</div>
+          <div class="fc-desc">Gerado com BNCC + Gemini</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('questoes')">
+          <div class="fc-icon">🧠</div>
+          <div class="fc-title">Gerar Questões</div>
+          <div class="fc-desc">Objetivo + discursivas</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('correcao')">
+          <div class="fc-icon">✅</div>
+          <div class="fc-title">Corrigir Discursiva</div>
+          <div class="fc-desc">Avaliação por critérios</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('frequencia')">
+          <div class="fc-icon">📅</div>
+          <div class="fc-title">Lançar Frequência</div>
+          <div class="fc-desc">Chamada + alertas LDBEN</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('matricula')">
+          <div class="fc-icon">👤</div>
+          <div class="fc-title">Matricular Aluno</div>
+          <div class="fc-desc">Inclui campos EJA + NEE</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('relatorio')">
+          <div class="fc-icon">📊</div>
+          <div class="fc-title">Relatório de Turma</div>
+          <div class="fc-desc">Análise bimestral</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('pei')">
+          <div class="fc-icon">📄</div>
+          <div class="fc-title">PEI / PDI</div>
+          <div class="fc-desc">Plano para alunos NEE</div>
+        </div>
+        <div class="ferramenta-card" onclick="irPara('configuracoes')">
+          <div class="fc-icon">🔧</div>
+          <div class="fc-title">Configurações</div>
+          <div class="fc-desc">API, e-mails, seed</div>
+        </div>
+      </div>
+
+      <div id="resultado-dashboard" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ PLANO DE AULA ═ -->
+    <div class="pagina-webapp" id="wa-plano">
+      <div class="page-title">📝 Plano de Aula Rápido</div>
+      <div class="page-subtitle">Gera plano completo alinhado à BNCC com 9 seções pedagógicas.</div>
+
+      <div class="form-card">
+        <h3>Dados do Plano</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-plano-componente">Componente Curricular *</label>
+            <select id="wa-plano-componente" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>Língua Portuguesa</option><option>Matemática</option>
+              <option>Ciências</option><option>História</option>
+              <option>Geografia</option><option>Arte</option>
+              <option>Educação Física</option><option>Ensino Religioso</option>
+              <option>Língua Inglesa</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-plano-ano">Ano / Série *</label>
+            <select id="wa-plano-ano" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>6º Ano</option><option>7º Ano</option>
+              <option>8º Ano</option><option>9º Ano</option>
+              <option>EJA Segmento II</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-plano-turma">Turma *</label>
+            <select id="wa-plano-turma" required>
+              <option value="" disabled selected>— Carregando... —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-plano-duracao">Duração (aulas 50min)</label>
+            <input type="number" id="wa-plano-duracao" value="1" min="1" max="10">
+          </div>
+        </div>
+        <div class="campo">
+          <label for="wa-plano-bncc">Código Habilidade BNCC *</label>
+          <input type="text" id="wa-plano-bncc" placeholder="Ex: EF07MA18" required style="text-transform:uppercase">
+        </div>
+        <div class="campo">
+          <label for="wa-plano-tema">Tema / Conteúdo Central *</label>
+          <input type="text" id="wa-plano-tema" placeholder="Ex: Porcentagem no cotidiano" required>
+        </div>
+        <div class="campo">
+          <label>Recursos Disponíveis</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" name="wa-plano-rec" value="Lousa"> Lousa</label>
+            <label><input type="checkbox" name="wa-plano-rec" value="Data show"> Data show</label>
+            <label><input type="checkbox" name="wa-plano-rec" value="Celular"> Celular</label>
+            <label><input type="checkbox" name="wa-plano-rec" value="Lab. Informática"> Lab. Informática</label>
+            <label><input type="checkbox" name="wa-plano-rec" value="Material impresso"> Material impresso</label>
+          </div>
+        </div>
+        <div class="campo">
+          <label><input type="checkbox" id="wa-plano-nee"> Há alunos com NEE nesta turma</label>
+        </div>
+        <button class="btn btn-primary" onclick="wa_enviarPlano()">📝 Gerar Plano de Aula</button>
+      </div>
+      <div id="wa-resultado-plano" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ QUESTÕES ══════ -->
+    <div class="pagina-webapp" id="wa-questoes">
+      <div class="page-title">🧠 Gerar Questões</div>
+      <div class="page-subtitle">Cole o texto base e o sistema gera 5 questões variadas (3 objetivas + 2 discursivas).</div>
+
+      <div class="form-card">
+        <h3>Texto Base</h3>
+        <div class="campo">
+          <label for="wa-questoes-texto">Texto / Conteúdo *</label>
+          <textarea id="wa-questoes-texto" rows="8" required
+            placeholder="Cole aqui o trecho do livro, enunciado ou conteúdo a partir do qual as questões serão geradas..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="wa_gerarQuestoes()">🧠 Gerar Questões</button>
+      </div>
+      <div id="wa-resultado-questoes" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ CORREÇÃO ══════ -->
+    <div class="pagina-webapp" id="wa-correcao">
+      <div class="page-title">✅ Corrigir Discursiva</div>
+      <div class="page-subtitle">Avalia a resposta do aluno com base nos critérios BNCC. A nota é uma sugestão — requer revisão do professor.</div>
+
+      <div class="form-card">
+        <h3>Dados da Questão</h3>
+        <div class="campo">
+          <label for="wa-corr-enunciado">Enunciado da Questão *</label>
+          <textarea id="wa-corr-enunciado" rows="3" required placeholder="Cole o enunciado da questão aqui..."></textarea>
+        </div>
+        <div class="campo">
+          <label for="wa-corr-bncc">Código BNCC *</label>
+          <input type="text" id="wa-corr-bncc" placeholder="Ex: EF08LP04" required style="text-transform:uppercase">
+        </div>
+      </div>
+      <div class="form-card">
+        <h3>Resposta do Aluno</h3>
+        <div class="campo">
+          <label for="wa-corr-resposta">Resposta do Aluno *</label>
+          <textarea id="wa-corr-resposta" rows="6" required placeholder="Cole ou digite a resposta do aluno aqui..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="wa_corrigir()">✅ Avaliar Resposta</button>
+      </div>
+      <div id="wa-resultado-correcao" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ ADAPTAR ═══════ -->
+    <div class="pagina-webapp" id="wa-adaptar">
+      <div class="page-title">♿ Adaptar Conteúdo NEE/EJA</div>
+      <div class="page-subtitle">Reescreve o conteúdo mantendo os objetivos pedagógicos, adequado à necessidade selecionada.</div>
+
+      <div class="form-card">
+        <h3>Conteúdo e Tipo de Adaptação</h3>
+        <div class="campo">
+          <label>Tipo de Adaptação *</label>
+          <div class="radio-group">
+            <label><input type="radio" name="wa-adapt-tipo" value="1"> <span>NEE — Deficiência Intelectual (DI)</span></label>
+            <label><input type="radio" name="wa-adapt-tipo" value="2"> <span>NEE — Transtorno do Espectro Autista (TEA)</span></label>
+            <label><input type="radio" name="wa-adapt-tipo" value="3"> <span>EJA — Educação de Jovens e Adultos</span></label>
+            <label><input type="radio" name="wa-adapt-tipo" value="4"> <span>Altas Habilidades / Superdotação</span></label>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="wa-adapt-texto">Conteúdo a Adaptar *</label>
+          <textarea id="wa-adapt-texto" rows="7" required
+            placeholder="Cole aqui o conteúdo, atividade ou texto que deseja adaptar..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="wa_adaptar()">♿ Adaptar Conteúdo</button>
+      </div>
+      <div id="wa-resultado-adaptar" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ RELATÓRIO ════= -->
+    <div class="pagina-webapp" id="wa-relatorio">
+      <div class="page-title">📊 Relatório de Turma</div>
+      <div class="page-subtitle">Gera relatório analítico bimestral com versão pública (LGPD) e versão do professor.</div>
+
+      <div class="form-card">
+        <h3>Parâmetros</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-rel-turma">Turma *</label>
+            <select id="wa-rel-turma" required>
+              <option value="" disabled selected>— Carregando... —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-rel-bimestre">Bimestre *</label>
+            <input type="text" id="wa-rel-bimestre" placeholder="Ex: 1B_2026" required>
+          </div>
+          <div class="campo">
+            <label for="wa-rel-componente">Componente Curricular *</label>
+            <select id="wa-rel-componente" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>Língua Portuguesa</option><option>Matemática</option>
+              <option>Ciências</option><option>História</option>
+              <option>Geografia</option><option>Arte</option>
+              <option>Educação Física</option><option>Língua Inglesa</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="wa_relatorio()">📊 Gerar Relatório</button>
+      </div>
+      <div id="wa-resultado-relatorio" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ DIAGNÓSTICO ══= -->
+    <div class="pagina-webapp" id="wa-diagnostico">
+      <div class="page-title">🎯 Diagnóstico Formativo</div>
+      <div class="page-subtitle">Gera sondagem diagnóstica com 5 questões para avaliar conhecimentos prévios.</div>
+
+      <div class="form-card">
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-diag-componente">Componente *</label>
+            <select id="wa-diag-componente" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>Língua Portuguesa</option><option>Matemática</option>
+              <option>Ciências</option><option>História</option><option>Geografia</option>
+              <option>Arte</option><option>Educação Física</option><option>Língua Inglesa</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-diag-ano">Ano / Série *</label>
+            <select id="wa-diag-ano" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>6º Ano</option><option>7º Ano</option>
+              <option>8º Ano</option><option>9º Ano</option>
+              <option>EJA Segmento II</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="wa-diag-bncc">Habilidade BNCC *</label>
+          <input type="text" id="wa-diag-bncc" placeholder="Ex: EF08CI07" required style="text-transform:uppercase">
+        </div>
+        <button class="btn btn-primary" onclick="wa_diagnostico()">🎯 Gerar Diagnóstico</button>
+      </div>
+      <div id="wa-resultado-diagnostico" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ COMUNICADO ═══= -->
+    <div class="pagina-webapp" id="wa-comunicado">
+      <div class="page-title">📧 Comunicado para Família</div>
+      <div class="page-subtitle">Redige comunicado escolar em tom acolhedor, pronto para impressão e assinatura.</div>
+
+      <div class="form-card">
+        <div class="campo">
+          <label for="wa-com-motivo">Motivo do Comunicado *</label>
+          <textarea id="wa-com-motivo" rows="4" required
+            placeholder="Ex: Aluno atingiu 20% de faltas. Solicitar comparecimento dos responsáveis para reunião..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="wa_comunicado()">📧 Gerar Comunicado</button>
+      </div>
+      <div id="wa-resultado-comunicado" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ PAUTA ════════= -->
+    <div class="pagina-webapp" id="wa-pauta">
+      <div class="page-title">📋 Pauta — Conselho de Classe</div>
+      <div class="page-subtitle">Estrutura pauta completa com 7 pontos para o Conselho de Classe.</div>
+
+      <div class="form-card">
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-pauta-turma">Turma *</label>
+            <select id="wa-pauta-turma" required>
+              <option value="" disabled selected>— Carregando... —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-pauta-bimestre">Bimestre *</label>
+            <input type="text" id="wa-pauta-bimestre" placeholder="Ex: 2B_2026" required>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="wa_pauta()">📋 Gerar Pauta</button>
+      </div>
+      <div id="wa-resultado-pauta" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ PEI ══════════= -->
+    <div class="pagina-webapp" id="wa-pei">
+      <div class="page-title">📄 Gerar PEI / PDI (NEE)</div>
+      <div class="page-subtitle">Plano Educacional Individualizado completo conforme diretrizes LGBTI/PNEE. Acesso restrito — LGPD.</div>
+
+      <div class="form-card">
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-pei-nome">Nome do Aluno *</label>
+            <input type="text" id="wa-pei-nome" placeholder="Nome completo" required>
+          </div>
+          <div class="campo">
+            <label for="wa-pei-turma">Turma *</label>
+            <select id="wa-pei-turma" required>
+              <option value="" disabled selected>— Carregando... —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-pei-tipo">Tipo de NEE *</label>
+            <select id="wa-pei-tipo" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option value="TEA">TEA — Transtorno do Espectro Autista</option>
+              <option value="DI">DI — Deficiência Intelectual</option>
+              <option value="DA">DA — Deficiência Auditiva</option>
+              <option value="DF">DF — Deficiência Física</option>
+              <option value="TDAH">TDAH</option>
+              <option value="Altas_Habilidades">Altas Habilidades</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo">
+          <label>Componentes Curriculares</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" name="wa-pei-comp" value="Língua Portuguesa"> L. Portuguesa</label>
+            <label><input type="checkbox" name="wa-pei-comp" value="Matemática"> Matemática</label>
+            <label><input type="checkbox" name="wa-pei-comp" value="Ciências"> Ciências</label>
+            <label><input type="checkbox" name="wa-pei-comp" value="História"> História</label>
+            <label><input type="checkbox" name="wa-pei-comp" value="Geografia"> Geografia</label>
+            <label><input type="checkbox" name="wa-pei-comp" value="Arte"> Arte</label>
+            <label><input type="checkbox" name="wa-pei-comp" value="Educação Física"> Ed. Física</label>
+          </div>
+          <div class="hint">Se nenhum marcado, gera para todos os componentes.</div>
+        </div>
+        <button class="btn btn-primary" onclick="wa_pei()">📄 Gerar PEI</button>
+      </div>
+      <div id="wa-resultado-pei" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ PROVA ════════= -->
+    <div class="pagina-webapp" id="wa-prova">
+      <div class="page-title">📜 Criar Prova Digital</div>
+      <div class="page-subtitle">Converte gabarito do Banco de Questões em Google Forms pronto para aplicação.</div>
+
+      <div class="form-card">
+        <div class="campo">
+          <label for="wa-prova-gabarito">ID do Gabarito *</label>
+          <input type="text" id="wa-prova-gabarito" required
+            placeholder="Encontre na planilha BANCO_QUESTOES › Gabaritos › coluna A">
+        </div>
+        <div class="campo">
+          <label for="wa-prova-prazo">Prazo para respostas (opcional)</label>
+          <input type="date" id="wa-prova-prazo">
+        </div>
+        <button class="btn btn-primary" onclick="wa_prova()">📜 Criar Prova Digital</button>
+      </div>
+      <div id="wa-resultado-prova" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ LOTE ═════════= -->
+    <div class="pagina-webapp" id="wa-lote">
+      <div class="page-title">📚 Corrigir Lote de Redações</div>
+      <div class="page-subtitle">Avalia todos os documentos de uma pasta do Drive. Cada doc deve ser uma redação de aluno.</div>
+
+      <div class="form-card">
+        <div class="campo">
+          <label for="wa-lote-pasta">ID da Pasta no Drive *</label>
+          <input type="text" id="wa-lote-pasta" required placeholder="ID da pasta contendo os documentos">
+        </div>
+        <div class="campo">
+          <label for="wa-lote-enunciado">Enunciado da Atividade *</label>
+          <textarea id="wa-lote-enunciado" rows="3" required
+            placeholder="Cole o enunciado da atividade..."></textarea>
+        </div>
+        <div class="campo">
+          <label for="wa-lote-bncc">Habilidade BNCC *</label>
+          <input type="text" id="wa-lote-bncc" placeholder="Ex: EF09LP24" required style="text-transform:uppercase">
+        </div>
+        <p class="text-muted" style="margin-bottom:12px;">
+          ⚠️ Todas as notas são <strong>sugestões</strong> e requerem validação do professor antes do lançamento.
+        </p>
+        <button class="btn btn-primary" onclick="wa_lote()">📚 Corrigir Lote</button>
+      </div>
+      <div id="wa-resultado-lote" class="resultado-container"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ FREQUÊNCIA ═══= -->
+    <div class="pagina-webapp" id="wa-frequencia">
+      <div class="page-title">📅 Lançar Frequência</div>
+      <div class="page-subtitle">Registra chamada diária. Alertas automáticos ao atingir 20% e 25% de faltas (LDBEN Art. 24).</div>
+
+      <div class="form-card">
+        <h3>Dados da Chamada</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-freq-turma">Turma *</label>
+            <select id="wa-freq-turma" required onchange="wa_carregarAlunos()">
+              <option value="" disabled selected>— Carregando... —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-freq-data">Data *</label>
+            <input type="date" id="wa-freq-data" required>
+          </div>
+          <div class="campo">
+            <label for="wa-freq-componente">Componente</label>
+            <select id="wa-freq-componente">
+              <option value="">— Geral / Todos —</option>
+              <option>Língua Portuguesa</option><option>Matemática</option>
+              <option>Ciências</option><option>História</option><option>Geografia</option>
+              <option>Arte</option><option>Educação Física</option><option>Língua Inglesa</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="wa-freq-lista-card" style="display:none;" class="form-card">
+        <h3>Chamada — <span id="wa-freq-turma-label"></span></h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-sm" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;"
+                  onclick="wa_marcarTodos('P')">✅ Todos Presentes</button>
+          <button class="btn btn-sm" style="background:#fce4ec;color:#c62828;border:1px solid #f48fb1;"
+                  onclick="wa_marcarTodos('F')">❌ Todos Ausentes</button>
+        </div>
+        <div id="wa-freq-tabela"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="wa_registrarChamada()">
+          💾 Registrar Chamada
+        </button>
+      </div>
+
+      <div id="wa-resultado-freq" class="resultado-container"></div>
+
+      <hr class="divisor">
+      <div class="form-card">
+        <h3>📊 Resumo de Faltas</h3>
+        <div class="campo">
+          <label for="wa-freq-resumo-turma">Turma</label>
+          <select id="wa-freq-resumo-turma">
+            <option value="" disabled selected>— Selecione —</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" style="flex:1" onclick="wa_resumoFaltas()">
+            📊 Ver Resumo
+          </button>
+          <button class="btn btn-secondary" style="flex:1" onclick="wa_gerarForm()">
+            📋 Gerar Form de Chamada
+          </button>
+        </div>
+        <div id="wa-freq-resumo" class="resultado-container mt-16"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ MATRÍCULA ════= -->
+    <div class="pagina-webapp" id="wa-matricula">
+      <div class="page-title">👤 Matricular Aluno</div>
+      <div class="page-subtitle">Cadastro completo de alunos. Campos EJA e NEE aparecem conforme seleção.</div>
+
+      <div class="form-card">
+        <h3>Dados Pessoais</h3>
+        <div class="grid-2">
+          <div class="campo" style="grid-column:1/-1;">
+            <label for="wa-mat-nome">Nome Completo *</label>
+            <input type="text" id="wa-mat-nome" placeholder="Nome completo do aluno" required>
+          </div>
+          <div class="campo">
+            <label for="wa-mat-nascimento">Data de Nascimento</label>
+            <input type="date" id="wa-mat-nascimento">
+          </div>
+          <div class="campo">
+            <label for="wa-mat-responsavel">Responsável</label>
+            <input type="text" id="wa-mat-responsavel" placeholder="Nome do responsável">
+          </div>
+          <div class="campo">
+            <label for="wa-mat-whatsapp">WhatsApp do Responsável</label>
+            <input type="tel" id="wa-mat-whatsapp" placeholder="(73) 9xxxx-xxxx">
+          </div>
+          <div class="campo">
+            <label for="wa-mat-email">E-mail do Responsável</label>
+            <input type="email" id="wa-mat-email" placeholder="responsavel@email.com">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3>Dados Escolares</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-mat-turma">Turma *</label>
+            <select id="wa-mat-turma" required onchange="wa_toggleEJA()">
+              <option value="" disabled selected>— Carregando... —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-mat-turno">Turno</label>
+            <select id="wa-mat-turno">
+              <option value="Matutino">Matutino</option>
+              <option value="Vespertino" selected>Vespertino</option>
+              <option value="Noturno">Noturno</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-mat-segmento">Segmento *</label>
+            <select id="wa-mat-segmento" required>
+              <option value="EF II">Ensino Fundamental II</option>
+              <option value="EJA Segmento II">EJA Segmento II</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="wa-mat-obs">Observações Pedagógicas</label>
+          <textarea id="wa-mat-obs" rows="2" placeholder="Aspectos relevantes para os professores..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3>Inclusão (NEE)</h3>
+        <div class="campo" style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" id="wa-mat-nee" onchange="wa_toggleNEE()">
+          <label for="wa-mat-nee" style="margin:0;cursor:pointer;">Possui Necessidade Educacional Especial (NEE)</label>
+        </div>
+        <div id="wa-campos-nee" style="display:none;margin-top:12px;">
+          <div class="grid-2">
+            <div class="campo">
+              <label for="wa-mat-tipo-nee">Tipo de NEE</label>
+              <select id="wa-mat-tipo-nee">
+                <option value="">— Selecione —</option>
+                <option value="TEA">TEA</option>
+                <option value="DI">DI — Deficiência Intelectual</option>
+                <option value="DA">DA — Deficiência Auditiva</option>
+                <option value="DF">DF — Deficiência Física</option>
+                <option value="TDAH">TDAH</option>
+                <option value="Altas_Habilidades">Altas Habilidades</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:8px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="wa-mat-laudo"> Possui laudo médico
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="wa-mat-pei"> Requer PEI/PDI
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card" id="wa-campos-eja" style="display:none;">
+        <h3>Dados EJA</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-mat-faixa">Faixa Etária *</label>
+            <select id="wa-mat-faixa">
+              <option value="">— Selecione —</option>
+              <option value="15-20">15 – 20 anos</option>
+              <option value="21-30">21 – 30 anos</option>
+              <option value="31-40">31 – 40 anos</option>
+              <option value="41-50">41 – 50 anos</option>
+              <option value="51+">51 anos ou mais</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-mat-esc-ant">Escolaridade Anterior</label>
+            <input type="text" id="wa-mat-esc-ant" placeholder="Ex: 4º Ano EF I">
+          </div>
+          <div class="campo">
+            <label for="wa-mat-motiv">Motivação para Retorno</label>
+            <input type="text" id="wa-mat-motiv" placeholder="Ex: Emprego">
+          </div>
+          <div class="campo">
+            <label for="wa-mat-turno-trab">Turno de Trabalho</label>
+            <select id="wa-mat-turno-trab">
+              <option value="">Não trabalha</option>
+              <option value="Manhã">Manhã</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Noite">Noite</option>
+              <option value="Integral">Integral</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="wa_matricular()">✅ Matricular Aluno</button>
+      <div id="wa-resultado-matricula" class="resultado-container mt-16"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════ CONFIGURAÇÕES = -->
+    <div class="pagina-webapp" id="wa-configuracoes">
+      <div class="page-title">🔧 Configurações</div>
+      <div class="page-subtitle">Configure a chave API Gemini, e-mails institucionais e dados iniciais do sistema.</div>
+
+      <div class="form-card" id="wa-cfg-status-card">
+        <h3>Status do Sistema</h3>
+        <div id="wa-cfg-status"><em>⏳ Verificando...</em></div>
+      </div>
+
+      <div class="form-card">
+        <h3>🔑 Chave API Gemini</h3>
+        <div class="campo">
+          <label for="wa-cfg-gemini">Chave Gemini (Google AI Studio) *</label>
+          <input type="password" id="wa-cfg-gemini" placeholder="AIza..." autocomplete="off">
+          <div class="hint">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <h3>📧 E-mails Institucionais</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-cfg-coord">Coordenação</label>
+            <input type="email" id="wa-cfg-coord" placeholder="coordenacao@escola.edu.br">
+          </div>
+          <div class="campo">
+            <label for="wa-cfg-dir">Direção</label>
+            <input type="email" id="wa-cfg-dir" placeholder="direcao@escola.edu.br">
+          </div>
+          <div class="campo">
+            <label for="wa-cfg-sec">Secretaria (opcional)</label>
+            <input type="email" id="wa-cfg-sec" placeholder="secretaria@escola.edu.br">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button class="btn btn-primary" onclick="wa_salvarConfig()">💾 Salvar Configurações</button>
+          <button class="btn btn-secondary" onclick="wa_testarGemini()">🔗 Testar Gemini</button>
+        </div>
+        <div id="wa-cfg-resultado" class="resultado-container mt-16"></div>
+      </div>
+
+      <div class="form-card">
+        <h3>🚀 Setup Inicial</h3>
+        <p class="text-muted" style="margin-bottom:14px;">
+          Cria pastas no Drive e planilhas-mestre. <strong>Execute apenas na primeira vez.</strong>
+        </p>
+        <button class="btn btn-primary" onclick="wa_executarSetup()">
+          🚀 Executar Setup Inicial
+        </button>
+        <div id="wa-cfg-setup" class="resultado-container mt-16"></div>
+      </div>
+
+      <div class="form-card">
+        <h3>🌱 Dados Iniciais</h3>
+        <p class="text-muted" style="margin-bottom:14px;">Execute após o Setup Inicial para habilitar as ferramentas.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-secondary" onclick="wa_popularBNCC()">
+            📚 Popular Catálogo BNCC (~60 habilidades)
+          </button>
+          <button class="btn btn-secondary" onclick="wa_popularTeste()">
+            🧪 Inserir Turmas e Alunos de Teste
+          </button>
+          <button class="btn" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;" onclick="wa_limparTeste()">
+            🗑️ Limpar Dados de Teste
+          </button>
+        </div>
+        <div id="wa-cfg-seed" class="resultado-container mt-16"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ DIAGNÓSTICO SIS -->
+    <div class="pagina-webapp" id="wa-sistema">
+      <div class="page-title">⚙️ Diagnóstico do Sistema</div>
+      <div class="page-subtitle">Verifica a integridade de todas as dependências do PEDAGOGO.AI.</div>
+
+      <div class="form-card">
+        <button class="btn btn-primary" onclick="wa_diagnosticoSistema()">🔍 Executar Diagnóstico</button>
+      </div>
+      <div id="wa-resultado-sistema" class="resultado-container mt-16"></div>
+    </div>
+
+  </main><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-msg" class="loading-msg">Processando...</div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container" class="toast-container"></div>
+
+<?!= include('JS') ?>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   WEBAPP — Lógica de Navegação e Inicialização
+   ═══════════════════════════════════════════════════════════ */
+
+/* Data no dashboard */
+document.getElementById('dash-data').textContent = new Date().toLocaleDateString('pt-BR', {
+  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+});
+
+/* Carrega turmas em todos os selects do webapp — chamada única */
+function wa_init() {
+  // Buscar turmas UMA vez e popular todos os selects
+  chamarServidor('listarTurmasAtivasHTML', [], function(turmas) {
+    ['wa-plano-turma','wa-rel-turma','wa-pauta-turma','wa-pei-turma',
+     'wa-freq-turma','wa-freq-resumo-turma','wa-mat-turma'].forEach(function(id) {
+      preencherSelect(id, turmas || [], '— Selecione a turma —');
+    });
+  }, 'Carregando turmas...');
+
+  // Data default: hoje
+  var hoje = new Date();
+  var yyyy = hoje.getFullYear();
+  var mm = String(hoje.getMonth()+1).padStart(2,'0');
+  var dd = String(hoje.getDate()).padStart(2,'0');
+  var dataHoje = yyyy+'-'+mm+'-'+dd;
+  var el = document.getElementById('wa-freq-data');
+  if (el) el.value = dataHoje;
+
+  // Carregar dashboard
+  wa_carregarDashboard();
+}
+
+document.addEventListener('DOMContentLoaded', wa_init);
+
+/** Navega para uma página do webapp */
+function irPara(pagina) {
+  document.querySelectorAll('.pagina-webapp').forEach(function(p) {
+    p.classList.remove('ativo');
+  });
+  document.querySelectorAll('.nav-item').forEach(function(a) {
+    a.classList.remove('ativo');
+  });
+  var pg = document.getElementById('wa-' + pagina);
+  if (pg) {
+    pg.classList.add('ativo');
+    document.getElementById('main-content').scrollTop = 0;
+  }
+  var navItem = document.querySelector('.nav-item[data-page="' + pagina + '"]');
+  if (navItem) navItem.classList.add('ativo');
+
+  // Inicializar página conforme necessário
+  if (pagina === 'configuracoes') wa_carregarStatusConfig();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+function wa_carregarDashboard() {
+  chamarServidor('obterDashboardHTML', [], function(d) {
+    var cards = [
+      { icon: '👥', valor: d.turmasAtivas, label: 'Turmas Ativas',    status: d.turmasAtivas > 0 ? 'ok' : 'warn' },
+      { icon: '📚', valor: d.bnccCount,    label: 'Habilidades BNCC', status: d.bnccCount > 0 ? 'ok' : 'warn' },
+      { icon: '🤖', valor: d.geminiOk ? '✅' : '❌', label: 'API Gemini',  status: d.geminiOk ? 'ok' : 'erro' },
+      { icon: '📁', valor: d.pastasOk ? '✅' : '❌', label: 'Pastas Drive', status: d.pastasOk ? 'ok' : 'warn' },
+      { icon: '📊', valor: d.planilhasOk ? '✅' : '❌', label: 'Planilhas', status: d.planilhasOk ? 'ok' : 'warn' },
+      { icon: '📧', valor: d.emailOk ? '✅' : '❌', label: 'E-mail Coord.', status: d.emailOk ? 'ok' : 'warn' }
+    ];
+    var html = '';
+    cards.forEach(function(c) {
+      html += '<div class="stat-card ' + c.status + '">' +
+        '<div class="stat-icon">' + c.icon + '</div>' +
+        '<div class="stat-valor">' + c.valor + '</div>' +
+        '<div class="stat-label">' + c.label + '</div>' +
+        '</div>';
+    });
+    document.getElementById('dashboard-cards').innerHTML = html;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AÇÕES DO WEBAPP
+   ═══════════════════════════════════════════════════════════ */
+
+/* PLANO DE AULA */
+function wa_enviarPlano() {
+  var dados = {
+    componente:       _v('wa-plano-componente'),
+    ano:              _v('wa-plano-ano'),
+    turma:            _v('wa-plano-turma'),
+    codigoHabilidade: _v('wa-plano-bncc').toUpperCase(),
+    tema:             _v('wa-plano-tema'),
+    duracao:          parseInt(_v('wa-plano-duracao')) || 1,
+    isEJA:            _v('wa-plano-ano').toUpperCase().indexOf('EJA') >= 0,
+    possuiNEE:        document.getElementById('wa-plano-nee').checked,
+    recursos:         obterCheckboxesMarcados('wa-plano-rec')
+  };
+  if (!dados.componente || !dados.ano || !dados.turma || !dados.codigoHabilidade || !dados.tema) {
+    mostrarToast('Preencha todos os campos obrigatórios.', 'erro'); return;
+  }
+  chamarServidor('gerarPlanoDeAulaHTML', [dados], function(res) {
+    wa_resultado('wa-resultado-plano', '✅ Plano de Aula Gerado!', res.url,
+      'Salvo em 01_PLANEJAMENTO no Drive.');
+  }, '📝 Gerando plano de aula com IA...');
+}
+
+/* QUESTÕES */
+function wa_gerarQuestoes() {
+  var texto = _v('wa-questoes-texto');
+  if (!texto || texto.trim().length < 50) {
+    mostrarToast('Forneça pelo menos um parágrafo de texto.', 'erro'); return;
+  }
+  chamarServidor('gerarQuestoesTextoHTML', [texto], function(res) {
+    if (res.sucesso) {
+      document.getElementById('wa-resultado-questoes').innerHTML =
+        '<div class="resultado-webapp"><pre>' + escapeHtml(res.questoes) + '</pre></div>';
+    } else {
+      mostrarToast(res.mensagem, 'erro');
+    }
+  }, '🧠 Gerando questões com IA...');
+}
+
+/* CORREÇÃO */
+function wa_corrigir() {
+  var enunciado = _v('wa-corr-enunciado');
+  var bncc      = _v('wa-corr-bncc').toUpperCase();
+  var resposta  = _v('wa-corr-resposta');
+  if (!enunciado || !bncc || !resposta) {
+    mostrarToast('Preencha todos os campos.', 'erro'); return;
+  }
+  chamarServidor('corrigirTextoHTML', [resposta, enunciado, bncc], function(res) {
+    if (res.sucesso) {
+      document.getElementById('wa-resultado-correcao').innerHTML =
+        '<div class="resultado-webapp">' +
+        '<p><strong>Nota sugerida: ' + escapeHtml(String(res.nota_sugerida)) + '/10</strong> <span class="chip">Requer revisão</span></p>' +
+        '<p style="margin-top:10px;"><strong>Feedback para o aluno:</strong><br>' + escapeHtml(res.feedback_aluno) + '</p>' +
+        '<p style="margin-top:10px;color:#5f6368;"><strong>Observação para o professor:</strong><br><em>' + escapeHtml(res.observacao_professor) + '</em></p>' +
+        '</div>';
+    } else {
+      mostrarToast(res.mensagem, 'erro');
+    }
+  }, '✅ Avaliando resposta com IA...');
+}
+
+/* ADAPTAR */
+function wa_adaptar() {
+  var tipo  = obterRadioSelecionado('wa-adapt-tipo');
+  var texto = _v('wa-adapt-texto');
+  if (!tipo) { mostrarToast('Selecione o tipo de adaptação.', 'erro'); return; }
+  if (!texto) { mostrarToast('Forneça o conteúdo a adaptar.', 'erro'); return; }
+  chamarServidor('adaptarConteudoTextoHTML', [tipo, texto], function(res) {
+    if (res.sucesso) {
+      document.getElementById('wa-resultado-adaptar').innerHTML =
+        '<div class="resultado-webapp"><pre>' + escapeHtml(res.adaptado) + '</pre></div>';
+    } else {
+      mostrarToast(res.mensagem, 'erro');
+    }
+  }, '♿ Adaptando conteúdo com IA...');
+}
+
+/* RELATÓRIO */
+function wa_relatorio() {
+  var turma = _v('wa-rel-turma'), comp = _v('wa-rel-componente'), bim = _v('wa-rel-bimestre');
+  if (!turma || !comp || !bim) { mostrarToast('Preencha todos os campos.', 'erro'); return; }
+  chamarServidor('gerarRelatorioTurmaHTML', [turma, comp, bim], function(res) {
+    wa_resultado('wa-resultado-relatorio', '✅ Relatório Gerado!', res.url,
+      'Versão pública e versão professor em 03_RESULTADOS.');
+  }, '📊 Gerando relatório...');
+}
+
+/* DIAGNÓSTICO FORMATIVO */
+function wa_diagnostico() {
+  var comp = _v('wa-diag-componente'), ano = _v('wa-diag-ano'), bncc = _v('wa-diag-bncc').toUpperCase();
+  if (!comp || !ano || !bncc) { mostrarToast('Preencha todos os campos.', 'erro'); return; }
+  chamarServidor('criarDiagnosticoFormativoHTML', [comp, ano, bncc], function(res) {
+    wa_resultado('wa-resultado-diagnostico', '✅ Diagnóstico Criado!', res.url, '5 questões diagnósticas no Drive.');
+  }, '🎯 Criando diagnóstico...');
+}
+
+/* COMUNICADO */
+function wa_comunicado() {
+  var motivo = _v('wa-com-motivo');
+  if (!motivo) { mostrarToast('Descreva o motivo.', 'erro'); return; }
+  chamarServidor('redigirComunicadoFamiliaHTML', [motivo], function(res) {
+    wa_resultado('wa-resultado-comunicado', '✅ Comunicado Gerado!', res.url, 'Salvo no Drive.');
+  }, '📧 Redigindo comunicado...');
+}
+
+/* PAUTA */
+function wa_pauta() {
+  var turma = _v('wa-pauta-turma'), bim = _v('wa-pauta-bimestre');
+  if (!turma || !bim) { mostrarToast('Preencha turma e bimestre.', 'erro'); return; }
+  chamarServidor('gerarPautaReuniaoHTML', [turma, bim], function(res) {
+    wa_resultado('wa-resultado-pauta', '✅ Pauta Criada!', res.url, 'Documento salvo no Drive.');
+  }, '📋 Gerando pauta...');
+}
+
+/* PEI */
+function wa_pei() {
+  var turma = _v('wa-pei-turma');
+  var comps = obterCheckboxesMarcados('wa-pei-comp');
+  var dados = {
+    nomeCompleto: _v('wa-pei-nome'),
+    turma: turma,
+    tipoNEE: _v('wa-pei-tipo'),
+    componentes: comps.length > 0 ? comps : ['Todos'],
+    segmento: turma.toUpperCase().indexOf('EJA') >= 0 ? 'EJA Segmento II' : 'EF II',
+    isEJA: turma.toUpperCase().indexOf('EJA') >= 0
+  };
+  if (!dados.nomeCompleto || !dados.turma || !dados.tipoNEE) {
+    mostrarToast('Preencha nome, turma e tipo de NEE.', 'erro'); return;
+  }
+  chamarServidor('gerarPEIHTML', [dados], function(res) {
+    wa_resultado('wa-resultado-pei', '✅ PEI Gerado!', res.url, 'Salvo em 04_ALUNOS/PEI_PDI/ (acesso restrito — LGPD).');
+  }, '📄 Gerando PEI com IA...');
+}
+
+/* PROVA */
+function wa_prova() {
+  var id = _v('wa-prova-gabarito'), prazo = _v('wa-prova-prazo') || null;
+  if (!id) { mostrarToast('Informe o ID do gabarito.', 'erro'); return; }
+  chamarServidor('criarProvaDigitalHTML', [id, prazo], function(res) {
+    document.getElementById('wa-resultado-prova').innerHTML =
+      '<div class="resultado-webapp">' +
+      '✅ Prova criada!<br>' +
+      '📋 <strong>Link para alunos:</strong> <a href="' + escapeHtml(res.urlForm) + '" target="_blank">' + escapeHtml(res.urlForm) + '</a>' +
+      '<br><button class="btn btn-sm btn-copiar mt-8" onclick="copiarTexto(\'' + escapeHtml(res.urlForm) + '\')">📋 Copiar link</button>' +
+      '<br><br>✏️ <a href="' + escapeHtml(res.urlEditar) + '" target="_blank">Editar formulário</a>' +
+      '</div>';
+  }, '📜 Criando prova digital...');
+}
+
+/* LOTE */
+function wa_lote() {
+  var pasta = _v('wa-lote-pasta'), enc = _v('wa-lote-enunciado'), bncc = _v('wa-lote-bncc').toUpperCase();
+  if (!pasta || !enc || !bncc) { mostrarToast('Preencha todos os campos.', 'erro'); return; }
+  chamarServidor('corrigirLoteHTML', [pasta, enc, bncc], function(res) {
+    var info = '✅ <strong>' + res.totalCorrigidos + '</strong> corrigida(s), <strong>' + res.totalErros + '</strong> erro(s)';
+    if (res.urlRelatorio) info += '<br><a href="' + escapeHtml(res.urlRelatorio) + '" target="_blank">📄 Ver relatório</a>';
+    document.getElementById('wa-resultado-lote').innerHTML = '<div class="resultado-webapp">' + info + '</div>';
+  }, '📚 Corrigindo redações...\nIsso pode levar alguns minutos.');
+}
+
+/* ═══════ FREQUÊNCIA ═══════════════════════════════════════ */
+
+function wa_carregarAlunos() {
+  var turma = _v('wa-freq-turma');
+  if (!turma) return;
+  document.getElementById('wa-freq-turma-label').textContent = turma;
+  var card = document.getElementById('wa-freq-lista-card');
+  var tabela = document.getElementById('wa-freq-tabela');
+  tabela.innerHTML = '<p class="text-muted">⏳ Carregando alunos...</p>';
+  card.style.display = 'block';
+  chamarServidor('listarAlunosTurmaHTML', [turma], function(alunos) {
+    if (!alunos || alunos.length === 0) {
+      tabela.innerHTML = '<p class="text-muted">Nenhum aluno ativo nesta turma.</p>'; return;
+    }
+    var html = '<table class="tabela-freq"><thead><tr>' +
+      '<th>Aluno</th><th style="text-align:center;">Presença</th></tr></thead><tbody>';
+    alunos.forEach(function(a, i) {
+      var nee = a.possuiNEE ? ' <span class="badge badge-aviso">NEE</span>' : '';
+      html += '<tr><td>' + escapeHtml(a.nome) + nee + '</td><td>' +
+        '<div class="radio-pf">' +
+        '<label><input type="radio" name="wa-freq-'+i+'" value="P" checked> P</label>' +
+        '<label><input type="radio" name="wa-freq-'+i+'" value="F"> F</label>' +
+        '</div></td></tr>';
+    });
+    html += '</tbody></table>';
+    tabela.innerHTML = html;
+    tabela.dataset.alunos = JSON.stringify(alunos.map(function(a){ return a.nome; }));
+  }, 'Carregando alunos...');
+}
+
+function wa_marcarTodos(val) {
+  document.querySelectorAll('#wa-freq-tabela input[type="radio"][value="'+val+'"]')
+    .forEach(function(r){ r.checked = true; });
+}
+
+function wa_registrarChamada() {
+  var turma  = _v('wa-freq-turma');
+  var di     = _v('wa-freq-data');
+  var comp   = _v('wa-freq-componente');
+  var tabela = document.getElementById('wa-freq-tabela');
+  if (!turma || !di || !tabela.dataset.alunos) {
+    mostrarToast('Selecione turma, data e aguarde o carregamento da lista.', 'erro'); return;
+  }
+  var p = di.split('-');
+  var dataFmt = p[2]+'/'+p[1]+'/'+p[0];
+  var nomes = JSON.parse(tabela.dataset.alunos);
+  var registros = nomes.map(function(nome, i) {
+    var rP = document.querySelector('input[name="wa-freq-'+i+'"][value="P"]');
+    return { nome: nome, presenca: (rP && rP.checked) ? 'P' : 'F' };
+  });
+  chamarServidor('lancarFrequenciaLoteHTML', [turma, dataFmt, comp, registros], function(res) {
+    var el = document.getElementById('wa-resultado-freq');
+    if (res.sucesso) {
+      var alerta = res.alertas > 0
+        ? '<br>⚠️ <strong>' + res.alertas + '</strong> aluno(s) em alerta — e-mail enviado à coordenação.'
+        : '';
+      el.innerHTML = '<div class="resultado-webapp">✅ Chamada registrada: <strong>' +
+        res.processados + '</strong> aluno(s) em ' + escapeHtml(dataFmt) + alerta + '</div>';
+    } else {
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+    }
+  }, '💾 Registrando chamada...');
+}
+
+function wa_resumoFaltas() {
+  var turma = _v('wa-freq-resumo-turma');
+  if (!turma) { mostrarToast('Selecione uma turma.', 'erro'); return; }
+  chamarServidor('buscarFrequenciasResumoHTML', [turma], function(res) {
+    var el = document.getElementById('wa-freq-resumo');
+    if (!res.alunos || res.alunos.length === 0) {
+      el.innerHTML = '<div class="resultado-webapp">Sem registros de frequência para esta turma.</div>'; return;
+    }
+    var html = '<table class="tabela-freq"><thead><tr>' +
+      '<th>Aluno</th><th style="text-align:center;">Total Aulas</th>' +
+      '<th style="text-align:center;">Faltas</th><th style="text-align:center;">%</th>' +
+      '<th>Status</th></tr></thead><tbody>';
+    res.alunos.forEach(function(a) {
+      var badge = a.nivel === 'critico'
+        ? '<span class="badge badge-erro">🔴 CRÍTICO</span>'
+        : a.nivel === 'atencao'
+        ? '<span class="badge badge-aviso">🟡 ATENÇÃO</span>'
+        : '<span class="badge badge-ok">🟢 OK</span>';
+      html += '<tr><td>' + escapeHtml(a.nomeAluno) + '</td>' +
+        '<td style="text-align:center;">' + a.totalAulas + '</td>' +
+        '<td style="text-align:center;">' + a.totalFaltas + '</td>' +
+        '<td style="text-align:center;font-weight:' + (a.nivel!=='ok'?'bold':'normal') + ';">' + a.pctFormatado + '</td>' +
+        '<td>' + badge + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = '<div class="resultado-webapp" style="padding:0;overflow:hidden;border-radius:10px;">' + html + '</div>';
+  }, '📊 Carregando resumo...');
+}
+
+function wa_gerarForm() {
+  var turma = _v('wa-freq-turma') || _v('wa-freq-resumo-turma');
+  if (!turma) { mostrarToast('Selecione uma turma.', 'erro'); return; }
+  chamarServidor('gerarChamadaFormHTML', [turma], function(res) {
+    if (res.sucesso) {
+      document.getElementById('wa-freq-resumo').innerHTML =
+        '<div class="resultado-webapp">✅ Form criado!<br>' +
+        '<a href="' + escapeHtml(res.url) + '" target="_blank">📋 Abrir formulário</a>' +
+        ' <button class="btn btn-sm btn-copiar" style="margin-left:8px;" onclick="copiarTexto(\'' +
+        escapeHtml(res.url) + '\')">📋 Copiar</button></div>';
+    } else {
+      mostrarToast(res.mensagem, 'erro');
+    }
+  }, '📋 Criando formulário no Google Forms...');
+}
+
+/* ═══════ MATRÍCULA ════════════════════════════════════════ */
+
+function wa_toggleEJA() {
+  var turma = _v('wa-mat-turma');
+  var camposEJA = document.getElementById('wa-campos-eja');
+  var isEJA = turma && turma.toUpperCase().indexOf('EJA') >= 0;
+  if (camposEJA) camposEJA.style.display = isEJA ? 'block' : 'none';
+  var seg = document.getElementById('wa-mat-segmento');
+  if (seg && isEJA) seg.value = 'EJA Segmento II';
+}
+
+function wa_toggleNEE() {
+  var chk = document.getElementById('wa-mat-nee');
+  var campos = document.getElementById('wa-campos-nee');
+  if (campos) campos.style.display = chk.checked ? 'block' : 'none';
+}
+
+function wa_matricular() {
+  var dados = {
+    nomeCompleto:            _v('wa-mat-nome').trim(),
+    dataNascimento:          _v('wa-mat-nascimento') || null,
+    turma:                   _v('wa-mat-turma'),
+    turno:                   _v('wa-mat-turno'),
+    segmento:                _v('wa-mat-segmento'),
+    responsavel:             _v('wa-mat-responsavel').trim(),
+    contatoWhatsApp:         _v('wa-mat-whatsapp').trim(),
+    emailResponsavel:        _v('wa-mat-email').trim(),
+    possuiNEE:               document.getElementById('wa-mat-nee').checked,
+    tipoNEE:                 _v('wa-mat-tipo-nee'),
+    laudoMedico:             document.getElementById('wa-mat-laudo').checked,
+    requerPEI:               document.getElementById('wa-mat-pei').checked,
+    observacoesPedagogicas:  _v('wa-mat-obs').trim(),
+    faixaEtariaEJA:          _v('wa-mat-faixa'),
+    escolaridadeAnteriorEJA: _v('wa-mat-esc-ant').trim(),
+    motivacaoRetornoEJA:     _v('wa-mat-motiv').trim(),
+    turnoTrabalhoEJA:        _v('wa-mat-turno-trab')
+  };
+  if (!dados.nomeCompleto || !dados.turma || !dados.segmento) {
+    mostrarToast('Preencha nome, turma e segmento.', 'erro'); return;
+  }
+  chamarServidor('matricularAlunoHTML', [dados], function(res) {
+    var el = document.getElementById('wa-resultado-matricula');
+    if (res.sucesso) {
+      el.innerHTML = '<div class="resultado-webapp">✅ Matriculado com sucesso!<br>' +
+        'ID: <strong>' + escapeHtml(res.id) + '</strong></div>';
+      document.getElementById('wa-mat-nome').value = '';
+      document.getElementById('wa-mat-responsavel').value = '';
+      document.getElementById('wa-mat-whatsapp').value = '';
+      document.getElementById('wa-mat-email').value = '';
+    } else {
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+    }
+  }, '👤 Matriculando aluno...');
+}
+
+/* ═══════ CONFIGURAÇÕES ════════════════════════════════════ */
+
+function wa_carregarStatusConfig() {
+  var box = document.getElementById('wa-cfg-status');
+  if (!box) return;
+  box.innerHTML = '<em>⏳ Verificando...</em>';
+  chamarServidor('obterStatusConfiguracaoHTML', [], function(s) {
+    var i = function(ok){ return ok ? '✅' : '❌'; };
+    box.innerHTML =
+      '<table style="font-size:13px;line-height:2;width:100%;"><tbody>' +
+      '<tr><td>' + i(s.geminiKey) + ' Chave Gemini</td>' +
+      '<td>' + i(s.emailCoordenacao) + ' E-mail Coordenação</td></tr>' +
+      '<tr><td>' + i(s.emailDirecao) + ' E-mail Direção</td>' +
+      '<td>' + i(s.pastasConfiguradas) + ' Pastas no Drive</td></tr>' +
+      '<tr><td>' + i(s.planilhaBNCC) + ' Planilha BNCC</td>' +
+      '<td>' + i(s.planilhaTurmas) + ' Planilha Turmas</td></tr>' +
+      '</tbody></table>' +
+      '<div style="margin-top:8px;font-size:12px;color:#5f6368;">' +
+      '📚 BNCC: <strong>' + s.bnccCount + '</strong> hab. &nbsp;|&nbsp; ' +
+      '👥 Turmas ativas: <strong>' + s.turmasCount + '</strong></div>';
+  });
+}
+
+function wa_salvarConfig() {
+  var dados = {
+    geminiKey:        document.getElementById('wa-cfg-gemini').value,
+    emailCoordenacao: document.getElementById('wa-cfg-coord').value,
+    emailDirecao:     document.getElementById('wa-cfg-dir').value,
+    emailSecretaria:  document.getElementById('wa-cfg-sec').value
+  };
+  chamarServidor('salvarConfiguracoesHTML', [dados], function(res) {
+    document.getElementById('wa-cfg-resultado').innerHTML =
+      '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) {
+      document.getElementById('wa-cfg-gemini').value = '';
+      setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 600);
+    }
+  }, '💾 Salvando configurações...');
+}
+
+function wa_testarGemini() {
+  var box = document.getElementById('wa-cfg-resultado');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Testando conexão com Gemini...</div>';
+  chamarServidor('testarGeminiHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+  });
+}
+
+function wa_executarSetup() {
+  if (!confirm('Executar o Setup Inicial? Isso criará pastas e planilhas no Drive.')) return;
+  var box = document.getElementById('wa-cfg-setup');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Executando Setup Inicial... Pode levar alguns segundos.</div>';
+  chamarServidor('executarSetupCompletoHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 600);
+  });
+}
+
+function wa_popularBNCC() {
+  var box = document.getElementById('wa-cfg-seed');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Populando BNCC...</div>';
+  chamarServidor('popularBNCCHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 600);
+  });
+}
+
+function wa_popularTeste() {
+  var box = document.getElementById('wa-cfg-seed');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Inserindo dados de teste...</div>';
+  chamarServidor('popularDadosTesteHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 600);
+  });
+}
+
+function wa_limparTeste() {
+  if (!confirm('Remover TODOS os dados de teste?')) return;
+  var box = document.getElementById('wa-cfg-seed');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Removendo...</div>';
+  chamarServidor('limparDadosTesteHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 600);
+  });
+}
+
+/* ═══════ DIAGNÓSTICO SISTEMA ═══════════════════════════════ */
+
+function wa_diagnosticoSistema() {
+  chamarServidor('executarDiagnosticoHTML', [], function(res) {
+    var status = res.resumo.critico > 0 ? '🔴 CRÍTICO' : res.resumo.atencao > 0 ? '🟡 ATENÇÃO' : '🟢 TUDO OK';
+    var html = '<div class="resultado-webapp">' +
+      '<p style="font-size:15px;font-weight:500;margin-bottom:12px;">' + status + '</p>' +
+      '<div style="display:flex;gap:16px;margin-bottom:14px;">' +
+      '<span><span class="semaforo semaforo-ok"></span> OK: <strong>' + res.resumo.ok + '</strong></span>' +
+      '<span><span class="semaforo semaforo-atencao"></span> Atenção: <strong>' + res.resumo.atencao + '</strong></span>' +
+      '<span><span class="semaforo semaforo-critico"></span> Crítico: <strong>' + res.resumo.critico + '</strong></span>' +
+      '</div>';
+    ['tecnico','pedagogico'].forEach(function(categoria) {
+      html += '<div class="diagnostico-card"><strong>' + (categoria === 'tecnico' ? 'Técnico' : 'Pedagógico') + '</strong>';
+      for (var k in res[categoria]) {
+        var it = res[categoria][k];
+        var cls = it.status === 'OK' ? 'ok' : it.status === 'ATENCAO' ? 'atencao' : 'critico';
+        html += '<div class="item"><span class="semaforo semaforo-'+cls+'"></span><strong>' +
+          escapeHtml(k) + '</strong><span class="item-msg">' + escapeHtml(it.mensagem) + '</span></div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    document.getElementById('wa-resultado-sistema').innerHTML = html;
+  }, '🔍 Executando diagnóstico...');
+}
+
+/* ═══════ HELPERS ══════════════════════════════════════════ */
+
+function _v(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+/** Exibe resultado com link e info extra */
+function wa_resultado(containerId, titulo, url, info) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var html = '<div class="resultado-webapp">✅ <strong>' + escapeHtml(titulo) + '</strong>';
+  if (url) {
+    html += '<br><a href="' + escapeHtml(url) + '" target="_blank">' + escapeHtml(url) + '</a>' +
+      '<button class="btn btn-sm btn-copiar mt-8" onclick="copiarTexto(\'' + escapeHtml(url) + '\')">📋 Copiar link</button>';
+  }
+  if (info) html += '<br><span style="color:#5f6368;font-size:12px;">' + escapeHtml(info) + '</span>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,188 @@
+<script>
+/* ============================================================
+   PEDAGOGO.AI — JavaScript Utilitário (Client-side)
+   ============================================================ */
+
+/** Navega para uma página da SPA (show/hide sections) */
+function navegarPara(pagina) {
+  document.querySelectorAll('.pagina').forEach(function(el) {
+    el.classList.add('oculto');
+  });
+  var alvo = document.getElementById('pg-' + pagina);
+  if (alvo) {
+    alvo.classList.remove('oculto');
+    alvo.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
+  // Limpar resultado anterior ao navegar
+  document.querySelectorAll('.resultado-container').forEach(function(el) {
+    el.innerHTML = '';
+  });
+}
+
+/** Mostra overlay de carregamento com mensagem customizada */
+function mostrarLoading(msg) {
+  var overlay = document.getElementById('loading-overlay');
+  var msgEl = document.getElementById('loading-msg');
+  if (msgEl) msgEl.textContent = msg || 'Processando...';
+  if (overlay) overlay.classList.add('ativo');
+  // Desabilitar botões
+  document.querySelectorAll('.btn-primary, .btn-success').forEach(function(b) {
+    b.disabled = true;
+  });
+}
+
+/** Esconde o overlay de carregamento */
+function esconderLoading() {
+  var overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.classList.remove('ativo');
+  document.querySelectorAll('.btn-primary, .btn-success').forEach(function(b) {
+    b.disabled = false;
+  });
+}
+
+/** Exibe notificação temporária (toast) */
+function mostrarToast(msg, tipo) {
+  tipo = tipo || 'info';
+  var container = document.getElementById('toast-container');
+  if (!container) return;
+  var toast = document.createElement('div');
+  toast.className = 'toast toast-' + tipo;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 3500);
+}
+
+/** Wrapper para google.script.run com loading e tratamento de erro */
+function chamarServidor(funcao, args, onSucesso, msgLoading) {
+  mostrarLoading(msgLoading || 'Processando...');
+  var runner = google.script.run
+    .withSuccessHandler(function(resultado) {
+      esconderLoading();
+      if (onSucesso) onSucesso(resultado);
+    })
+    .withFailureHandler(function(erro) {
+      esconderLoading();
+      mostrarToast('Erro: ' + erro.message, 'erro');
+      console.error(erro);
+    });
+  // Chamar a função do servidor com argumentos
+  runner[funcao].apply(runner, args || []);
+}
+
+/** Exibe resultado de sucesso com link num container */
+function mostrarResultado(containerId, titulo, url, infoExtra) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var html = '<div class="resultado"><h3>✅ ' + escapeHtml(titulo) + '</h3>';
+  if (url) {
+    html += '<a href="' + escapeHtml(url) + '" target="_blank">' + escapeHtml(url) + '</a>';
+    html += '<div class="mt-8"><button class="btn-copiar btn btn-sm" onclick="copiarTexto(\'' +
+            escapeHtml(url) + '\')">📋 Copiar link</button></div>';
+  }
+  if (infoExtra) {
+    html += '<div class="resultado-info">' + infoExtra + '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+/** Exibe resultado de erro num container */
+function mostrarResultadoErro(containerId, mensagem) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '<div class="resultado resultado-erro"><h3>❌ Erro</h3><p>' +
+    escapeHtml(mensagem) + '</p></div>';
+}
+
+/** Copia texto para o clipboard */
+function copiarTexto(texto) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(texto).then(function() {
+      mostrarToast('Link copiado!', 'sucesso');
+    });
+  } else {
+    // Fallback
+    var ta = document.createElement('textarea');
+    ta.value = texto;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    mostrarToast('Link copiado!', 'sucesso');
+  }
+}
+
+/** Popula um <select> com opções */
+function preencherSelect(elementId, opcoes, placeholder) {
+  var select = document.getElementById(elementId);
+  if (!select) return;
+  select.innerHTML = '';
+  if (placeholder) {
+    var opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = placeholder;
+    opt.disabled = true;
+    opt.selected = true;
+    select.appendChild(opt);
+  }
+  opcoes.forEach(function(op) {
+    var opt = document.createElement('option');
+    if (typeof op === 'object') {
+      opt.value = op.valor || op.value || op;
+      opt.textContent = op.texto || op.label || op;
+    } else {
+      opt.value = op;
+      opt.textContent = op;
+    }
+    select.appendChild(opt);
+  });
+}
+
+/** Validação simples: verifica se campos required estão preenchidos */
+function validarCampos(formId) {
+  var form = document.getElementById(formId);
+  if (!form) return false;
+  var campos = form.querySelectorAll('[required]');
+  var valido = true;
+  campos.forEach(function(campo) {
+    campo.style.borderColor = '';
+    if (!campo.value || !campo.value.trim()) {
+      campo.style.borderColor = 'var(--cor-erro)';
+      valido = false;
+    }
+  });
+  if (!valido) mostrarToast('Preencha todos os campos obrigatórios.', 'erro');
+  return valido;
+}
+
+/** Obtém valores de checkboxes marcados */
+function obterCheckboxesMarcados(name) {
+  var checks = document.querySelectorAll('input[name="' + name + '"]:checked');
+  return Array.prototype.map.call(checks, function(c) { return c.value; });
+}
+
+/** Obtém valor de radio selecionado */
+function obterRadioSelecionado(name) {
+  var radio = document.querySelector('input[name="' + name + '"]:checked');
+  return radio ? radio.value : null;
+}
+
+/** Escape HTML para prevenir XSS */
+function escapeHtml(text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(text));
+  return div.innerHTML;
+}
+
+/** Popula selects de turma chamando o servidor */
+function carregarTurmas(selectId) {
+  chamarServidor('listarTurmasAtivasHTML', [], function(turmas) {
+    preencherSelect(selectId, turmas || [], '— Selecione a turma —');
+  }, 'Carregando turmas...');
+}
+</script>
