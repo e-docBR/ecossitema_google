@@ -249,6 +249,11 @@ function listarUsuariosPorPapel() {
 function adicionarUsuarioAoPapel(email, papel) {
   verificarPermissao(PAPEIS.GESTOR);
 
+  // Atribuir o papel de admin exige que o solicitante seja admin
+  if (papel === PAPEIS.ADMIN) {
+    verificarPermissao(PAPEIS.ADMIN);
+  }
+
   const emailNorm = email.trim().toLowerCase();
   if (!emailNorm.includes('@')) throw new Error(`E-mail inválido: ${email}`);
   if (!Object.values(PAPEIS).includes(papel)) throw new Error(`Papel inválido: ${papel}`);

@@ -22,8 +22,10 @@
  * @throws {Error} Se o usuário não tiver autorização
  */
 function verificarPermissao(papelRequerido) {
-  const email    = getUsuarioAtivo();
-  const papel    = getUsuarioPapel(email);    // fonte de verdade centralizada
+  const email  = getUsuarioAtivo();
+  // Chamada SEM argumento: ativa cache e fallback do proprietário do Drive.
+  // Chamar com email desabilitaria ehAtivo, ignorando o fallback de emergência.
+  const papel  = getUsuarioPapel();
   const nivelAtual    = nivelPapel(papel);
   const nivelRequerido = nivelPapel(papelRequerido);
 

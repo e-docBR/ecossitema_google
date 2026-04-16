@@ -140,17 +140,7 @@ function removerUsuarioDoPapelHTML(email, papel) {
   }
 }
 
-/**
- * Bootstrap: registrar o usuário atual como admin (só funciona se EMAILS_ADMIN estiver vazio).
- */
-function registrarMeComoAdminHTML() {
-  try {
-    const msg = registrarMeComoAdmin();
-    return { sucesso: true, mensagem: msg };
-  } catch (e) {
-    return { sucesso: false, mensagem: e.message };
-  }
-}
+// registrarMeComoAdminHTML() está definido em 17_Usuarios.gs (fonte de verdade).
 
 /**
  * Retorna estatísticas para o Dashboard do webapp.
@@ -175,24 +165,155 @@ function obterDashboardHTML() {
 }
 
 /**
- * Gera questões a partir de texto colado pelo usuário (versão webapp — sem seleção de Docs).
- * @param {string} texto
- * @returns {{sucesso:boolean, questoes?:string, mensagem?:string}}
+ * Gera questões a partir de texto livre e salva automaticamente no Banco de Questões.
+ * Substitui gerarQuestoesTextoHTML (que não salvava).
+ *
+ * @param {Object} dados - { texto, componente, ano, habilidade?, dificuldade }
+ * @returns {{sucesso, total, questoesSalvas, questoes, mensagem?}}
+ */
+function gerarESalvarQuestoesHTML(dados) {
+  try {
+    verificarPermissao(PAPEIS.PROFESSOR);
+
+    if (!dados || !dados.texto || dados.texto.trim().length < 50) {
+      return { sucesso: false, mensagem: 'Texto muito curto. Forneça pelo menos um parágrafo.' };
+    }
+
+    const config = getConfig();
+    if (!config.SHEETS.BANCO_QUESTOES) {
+      return { sucesso: false, mensagem: 'Banco de Questões não configurado. Execute o Setup Inicial primeiro.' };
+    }
+
+    const componente  = (dados.componente  || 'Língua Portuguesa').trim();
+    const ano         = (dados.ano         || '9º Ano').trim();
+    const habilidade  = dados.habilidade   ? dados.habilidade.trim().toUpperCase() : '';
+    const dificuldade = dados.dificuldade  ? dados.dificuldade.toUpperCase() : 'MEDIO';
+
+    // Descrição BNCC se fornecida
+    let bnccLinha = '';
+    if (habilidade) {
+      try {
+        const h = buscarHabilidadeBNCC(habilidade);
+        bnccLinha = `HABILIDADE BNCC: ${h.codigo} — ${h.descricao}\n`;
+      } catch(_) { /* código não encontrado, continua sem ele */ }
+    }
+
+    const prompt =
+      `Você é professor(a) especialista em avaliação educacional.\n` +
+      `Com base no texto abaixo, gere questões para ${componente}, ${ano}.\n\n` +
+      `${bnccLinha}` +
+      `DIFICULDADE: ${dificuldade}\n` +
+      `TAXONOMIA DE BLOOM: Lembrar, Compreender e Aplicar\n\n` +
+      `TEXTO BASE:\n"${dados.texto.substring(0, 2500)}"\n\n` +
+      `Gere EXATAMENTE 3 questões OBJETIVAS (A-D) e 2 DISCURSIVAS.\n` +
+      `Adapte o nível para Ensino Fundamental ou EJA.\n\n` +
+      `RETORNE APENAS JSON VÁLIDO (sem markdown):\n` +
+      `{\n` +
+      `  "objetivas": [\n` +
+      `    {\n` +
+      `      "enunciado": "texto da questão",\n` +
+      `      "alternativas": {"A":"...","B":"...","C":"...","D":"..."},\n` +
+      `      "gabarito": "A",\n` +
+      `      "justificativa": "explicação pedagógica"\n` +
+      `    }\n` +
+      `  ],\n` +
+      `  "discursivas": [\n` +
+      `    {\n` +
+      `      "enunciado": "texto da questão dissertativa",\n` +
+      `      "gabarito_referencia": "resposta esperada",\n` +
+      `      "rubrica": [\n` +
+      `        {"criterio":"Compreensão","pontuacao_maxima":4},\n` +
+      `        {"criterio":"Argumentação","pontuacao_maxima":3},\n` +
+      `        {"criterio":"Clareza textual","pontuacao_maxima":3}\n` +
+      `      ]\n` +
+      `    }\n` +
+      `  ]\n` +
+      `}`;
+
+    const resultado = chamarGeminiJSON(prompt);
+
+    if (!resultado || (!Array.isArray(resultado.objetivas) && !Array.isArray(resultado.discursivas))) {
+      throw new Error('IA não retornou questões em formato estruturado. Tente novamente.');
+    }
+
+    const questoesSalvas = [];
+    const nivelBloom     = 'Compreensão';
+    const habBanco       = habilidade || 'GERAL';
+
+    (resultado.objetivas || []).forEach(q => {
+      try {
+        const saved = salvarQuestaoNoBanco({
+          tipo:         TIPOS_QUESTAO.OBJETIVA,
+          componente:   componente,
+          ano:          ano,
+          habilidade:   habBanco,
+          nivelBloom:   nivelBloom,
+          dificuldade:  dificuldade,
+          enunciado:    q.enunciado,
+          alternativas: q.alternativas,
+          gabarito:     q.gabarito     || '',
+          rubrica:      '',
+          requerImagem: false,
+          descImagem:   ''
+        });
+        questoesSalvas.push({ id: saved.id, tipo: 'Objetiva', enunciado: q.enunciado.substring(0, 120) });
+      } catch(e) {
+        registrarLog('ERRO', 'Falha ao salvar questão objetiva: ' + e.message);
+      }
+    });
+
+    (resultado.discursivas || []).forEach(q => {
+      try {
+        const saved = salvarQuestaoNoBanco({
+          tipo:         TIPOS_QUESTAO.DISCURSIVA,
+          componente:   componente,
+          ano:          ano,
+          habilidade:   habBanco,
+          nivelBloom:   nivelBloom,
+          dificuldade:  dificuldade,
+          enunciado:    q.enunciado,
+          alternativas: null,
+          gabarito:     q.gabarito_referencia || '',
+          rubrica:      JSON.stringify(q.rubrica || []),
+          requerImagem: false,
+          descImagem:   ''
+        });
+        questoesSalvas.push({ id: saved.id, tipo: 'Discursiva', enunciado: q.enunciado.substring(0, 120) });
+      } catch(e) {
+        registrarLog('ERRO', 'Falha ao salvar questão discursiva: ' + e.message);
+      }
+    });
+
+    if (questoesSalvas.length === 0) {
+      throw new Error('Nenhuma questão foi salva. Verifique se o Setup Inicial foi executado e o Banco de Questões está acessível.');
+    }
+
+    registrarLog('INFO',
+      `${questoesSalvas.length} questões salvas no banco via webapp`,
+      `Componente: ${componente} | BNCC: ${habilidade || 'sem código'}`
+    );
+    return { sucesso: true, total: questoesSalvas.length, questoesSalvas, questoes: resultado };
+
+  } catch (e) {
+    registrarLog('ERRO', 'gerarESalvarQuestoesHTML: ' + e.message);
+    return { sucesso: false, mensagem: e.message };
+  }
+}
+
+/**
+ * @deprecated Use gerarESalvarQuestoesHTML — esta versão não salva no banco.
  */
 function gerarQuestoesTextoHTML(texto) {
   try {
     verificarPermissao(PAPEIS.PROFESSOR);
     if (!texto || texto.trim().length < 50) {
-      return { sucesso: false, mensagem: 'Texto muito curto. Forneça pelo menos um parágrafo.' };
+      return { sucesso: false, mensagem: 'Texto muito curto.' };
     }
-    const prompt =
-      'Com base no seguinte texto, gere 5 questões variadas (3 objetivas de múltipla escolha + 2 discursivas) adequadas para avaliação escolar.\n\n' +
+    const questoes = chamarGemini(
+      'Com base no seguinte texto, gere 5 questões variadas (3 objetivas + 2 discursivas).\n\n' +
       'TEXTO BASE:\n"' + texto.trim().substring(0, 2500) + '"\n\n' +
-      'Para cada questão objetiva: 4 alternativas (A-D) com gabarito indicado.\n' +
-      'Para cada questão discursiva: critérios de avaliação (3 critérios, 10 pts).\n' +
-      'Adapte o nível para o Ensino Fundamental/EJA.';
-    const questoes = chamarGemini(prompt);
-    registrarLog('INFO', 'Questões geradas via webapp', texto.length + ' chars');
+      'Para objetivas: 4 alternativas (A-D) com gabarito. Para discursivas: critérios de avaliação.'
+    );
     return { sucesso: true, questoes };
   } catch (e) {
     return { sucesso: false, mensagem: e.message };
@@ -1276,6 +1397,7 @@ function corrigirLoteHTML(pastaId, enunciado, codigoBNCC) {
 
 /** Diagnóstico do sistema — versão HTML */
 function executarDiagnosticoHTML() {
+  verificarPermissao(PAPEIS.GESTOR);
   return diagnosticarSistema();
 }
 
@@ -1339,6 +1461,7 @@ function obterStatusConfiguracaoHTML() {
  */
 function salvarConfiguracoesHTML(dados) {
   try {
+    verificarPermissao(PAPEIS.GESTOR);
     if (!dados) return { sucesso: false, mensagem: 'Dados não fornecidos.' };
 
     const props = PropertiesService.getScriptProperties();
@@ -1389,6 +1512,7 @@ function salvarConfiguracoesHTML(dados) {
  */
 function executarSetupCompletoHTML() {
   try {
+    verificarPermissao(PAPEIS.ADMIN);
     verificarPreRequisitos();
     criarEstruturaPastas();
     criarPlanilhasMestre();

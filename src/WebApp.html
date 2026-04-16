@@ -428,6 +428,32 @@
       <div class="page-title">🏠 Dashboard</div>
       <div class="page-subtitle">Visão geral do sistema — <span id="dash-data"></span></div>
 
+      <!-- Bootstrap admin: exibido apenas quando nenhum admin está cadastrado -->
+      <div id="wa-bootstrap-admin" style="display:none;margin-bottom:20px;">
+        <div style="background:#fef7e0;border:1px solid #f9ab00;border-radius:8px;padding:16px 20px;">
+          <div style="font-weight:600;color:#b06000;margin-bottom:6px;">⚠️ Configuração inicial necessária</div>
+          <div style="font-size:13px;color:#555;margin-bottom:12px;">
+            Nenhum administrador cadastrado. Registre-se como Administrador para liberar o acesso completo ao sistema.
+          </div>
+          <button onclick="wa_registrarMeAdmin()"
+            style="background:#1a73e8;color:#fff;border:none;border-radius:6px;
+                   padding:8px 20px;font-size:13px;font-weight:500;cursor:pointer;">
+            🔑 Registrar-me como Administrador
+          </button>
+        </div>
+      </div>
+
+      <!-- Acesso negado: exibido quando o usuário está cadastrado em outro papel mas sem permissão suficiente -->
+      <div id="wa-sem-acesso" style="display:none;margin-bottom:20px;">
+        <div style="background:#fce8e6;border:1px solid #d93025;border-radius:8px;padding:16px 20px;">
+          <div style="font-weight:600;color:#c5221f;margin-bottom:6px;">🔒 Acesso limitado</div>
+          <div style="font-size:13px;color:#555;">
+            Seu perfil atual é <strong id="wa-papel-atual-label"></strong>.
+            Algumas funcionalidades requerem permissão adicional. Contate o administrador do sistema.
+          </div>
+        </div>
+      </div>
+
       <div id="dashboard-cards" class="dashboard-grid">
         <div class="stat-card" style="border-top:3px solid #9e9e9e;">
           <div class="stat-icon">⏳</div>
@@ -551,16 +577,56 @@
     <!-- ════════════════════════════════════════ QUESTÕES ══════ -->
     <div class="pagina-webapp" id="wa-questoes">
       <div class="page-title">🧠 Gerar Questões</div>
-      <div class="page-subtitle">Cole o texto base e o sistema gera 5 questões variadas (3 objetivas + 2 discursivas).</div>
+      <div class="page-subtitle">Gera 3 objetivas + 2 discursivas e salva automaticamente no Banco de Questões.</div>
 
       <div class="form-card">
-        <h3>Texto Base</h3>
+        <h3>Dados da Avaliação</h3>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="wa-q-componente">Componente Curricular *</label>
+            <select id="wa-q-componente" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>Língua Portuguesa</option>
+              <option>Matemática</option>
+              <option>Ciências</option>
+              <option>História</option>
+              <option>Geografia</option>
+              <option>Arte</option>
+              <option>Educação Física</option>
+              <option>Ensino Religioso</option>
+              <option>Língua Inglesa</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-q-ano">Ano / Série *</label>
+            <select id="wa-q-ano" required>
+              <option value="" disabled selected>— Selecione —</option>
+              <option>1º Ano</option><option>2º Ano</option><option>3º Ano</option>
+              <option>4º Ano</option><option>5º Ano</option><option>6º Ano</option>
+              <option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+              <option>EJA Segmento I</option><option>EJA Segmento II</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="wa-q-bncc">Habilidade BNCC (opcional)</label>
+            <input type="text" id="wa-q-bncc" placeholder="Ex: EF07LP05"
+              style="text-transform:uppercase" maxlength="10">
+          </div>
+          <div class="campo">
+            <label for="wa-q-dificuldade">Dificuldade</label>
+            <select id="wa-q-dificuldade">
+              <option value="FACIL">Fácil</option>
+              <option value="MEDIO" selected>Médio</option>
+              <option value="DIFICIL">Difícil</option>
+            </select>
+          </div>
+        </div>
         <div class="campo">
           <label for="wa-questoes-texto">Texto / Conteúdo *</label>
           <textarea id="wa-questoes-texto" rows="8" required
             placeholder="Cole aqui o trecho do livro, enunciado ou conteúdo a partir do qual as questões serão geradas..."></textarea>
         </div>
-        <button class="btn btn-primary" onclick="wa_gerarQuestoes()">🧠 Gerar Questões</button>
+        <button class="btn btn-primary" onclick="wa_gerarQuestoes()">🧠 Gerar e Salvar Questões</button>
       </div>
       <div id="wa-resultado-questoes" class="resultado-container"></div>
     </div>
@@ -1253,7 +1319,8 @@ function wa_init() {
   google.script.run
     .withSuccessHandler(function(perfil) {
       var badge = document.getElementById('wa-user-badge');
-      if (badge) badge.textContent = perfil.papelLabel || '';
+      if (badge) badge.textContent = perfil.papelLabel || 'Sem acesso';
+
       // Role-based nav visibility
       document.querySelectorAll('.role-coordenador').forEach(function(el) {
         el.style.display = perfil.nivelAcesso >= 2 ? '' : 'none';
@@ -1261,9 +1328,28 @@ function wa_init() {
       document.querySelectorAll('.role-gestor').forEach(function(el) {
         el.style.display = perfil.nivelAcesso >= 3 ? '' : 'none';
       });
+
       // Mostrar opção admin no select de papel apenas para admins
       var optAdmin = document.getElementById('wa-opt-admin');
       if (optAdmin) optAdmin.style.display = perfil.ehAdmin ? '' : 'none';
+
+      // Bootstrap: usuário não cadastrado → exibir botão de primeiro admin
+      var bootstrap = document.getElementById('wa-bootstrap-admin');
+      var semAcesso  = document.getElementById('wa-sem-acesso');
+      var papelLabel = document.getElementById('wa-papel-atual-label');
+
+      if (!perfil.ehCadastrado) {
+        if (bootstrap) bootstrap.style.display = '';
+        if (semAcesso)  semAcesso.style.display  = 'none';
+      } else if (perfil.nivelAcesso < 3) {
+        // Cadastrado mas sem permissão de gestor+ → mostrar aviso
+        if (bootstrap)  bootstrap.style.display  = 'none';
+        if (semAcesso)  semAcesso.style.display   = '';
+        if (papelLabel) papelLabel.textContent    = perfil.papelLabel || perfil.papel;
+      } else {
+        if (bootstrap) bootstrap.style.display = 'none';
+        if (semAcesso)  semAcesso.style.display = 'none';
+      }
     })
     .withFailureHandler(function() {})
     .obterPerfilUsuarioAtualHTML();
@@ -1293,6 +1379,30 @@ function wa_init() {
 }
 
 document.addEventListener('DOMContentLoaded', wa_init);
+
+/** Bootstrap: registra o usuário ativo como admin (só funciona se nenhum admin existir) */
+function wa_registrarMeAdmin() {
+  mostrarLoading('Registrando administrador...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      esconderLoading();
+      if (res.sucesso) {
+        mostrarToast('✅ ' + res.mensagem, 'sucesso');
+        // Recarregar a página para aplicar o novo papel
+        setTimeout(function() { window.location.reload(); }, 1500);
+      } else {
+        mostrarToast('❌ ' + res.mensagem, 'erro');
+        // Se já existe admin, esconder o banner de bootstrap
+        var bootstrap = document.getElementById('wa-bootstrap-admin');
+        if (bootstrap) bootstrap.style.display = 'none';
+      }
+    })
+    .withFailureHandler(function(e) {
+      esconderLoading();
+      mostrarToast('❌ Erro: ' + e.message, 'erro');
+    })
+    .registrarMeComoAdminHTML();
+}
 
 /** Navega para uma página do webapp */
 function irPara(pagina) {
@@ -1437,18 +1547,80 @@ function wa_enviarPlano() {
 
 /* QUESTÕES */
 function wa_gerarQuestoes() {
-  var texto = _v('wa-questoes-texto');
+  var texto      = _v('wa-questoes-texto');
+  var componente = _v('wa-q-componente');
+  var ano        = _v('wa-q-ano');
+  var habilidade = (_v('wa-q-bncc') || '').toUpperCase().trim();
+  var dificuldade = _v('wa-q-dificuldade') || 'MEDIO';
+
   if (!texto || texto.trim().length < 50) {
     mostrarToast('Forneça pelo menos um parágrafo de texto.', 'erro'); return;
   }
-  chamarServidor('gerarQuestoesTextoHTML', [texto], function(res) {
-    var el = document.getElementById('wa-resultado-questoes');
-    if (res.sucesso) {
-      el.innerHTML = '<div class="resultado-webapp"><pre>' + escapeHtml(res.questoes) + '</pre></div>';
-    } else {
-      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
-    }
-  }, '🧠 Gerando questões com IA...');
+  if (!componente || !ano) {
+    mostrarToast('Selecione o Componente Curricular e o Ano/Série.', 'erro'); return;
+  }
+
+  chamarServidor('gerarESalvarQuestoesHTML',
+    [{ texto: texto, componente: componente, ano: ano, habilidade: habilidade, dificuldade: dificuldade }],
+    function(res) {
+      var el = document.getElementById('wa-resultado-questoes');
+      if (!res.sucesso) {
+        el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+        return;
+      }
+
+      var html = '<div class="resultado-webapp">';
+      html += '<p style="color:#137333;font-weight:600;margin-bottom:16px;">✅ ' +
+              res.total + ' questão(ões) geradas e salvas no Banco de Questões!</p>';
+
+      // Questões objetivas
+      var obj = (res.questoes && res.questoes.objetivas) || [];
+      if (obj.length) {
+        html += '<h4 style="margin:0 0 10px;">📝 Questões Objetivas</h4>';
+        obj.forEach(function(q, i) {
+          html += '<div style="background:#f8f9fa;border-radius:6px;padding:12px;margin-bottom:10px;">';
+          html += '<p style="font-weight:500;margin:0 0 8px;">' + (i+1) + '. ' + escapeHtml(q.enunciado) + '</p>';
+          ['A','B','C','D'].forEach(function(l) {
+            var cor = q.gabarito === l ? 'color:#137333;font-weight:600' : 'color:#444';
+            html += '<p style="margin:2px 0;font-size:13px;' + cor + '">(' + l + ') ' +
+                    escapeHtml((q.alternativas || {})[l] || '') + '</p>';
+          });
+          html += '<p style="font-size:11px;color:#5f6368;margin-top:6px;">Gabarito: ' +
+                  escapeHtml(q.gabarito || '') + '</p>';
+          html += '</div>';
+        });
+      }
+
+      // Questões discursivas
+      var dis = (res.questoes && res.questoes.discursivas) || [];
+      if (dis.length) {
+        html += '<h4 style="margin:16px 0 10px;">✏️ Questões Discursivas</h4>';
+        dis.forEach(function(q, i) {
+          html += '<div style="background:#f8f9fa;border-radius:6px;padding:12px;margin-bottom:10px;">';
+          html += '<p style="font-weight:500;margin:0 0 8px;">' + (i+1) + '. ' + escapeHtml(q.enunciado) + '</p>';
+          if (q.gabarito_referencia) {
+            html += '<p style="font-size:12px;color:#5f6368;">Resposta esperada: ' +
+                    escapeHtml(q.gabarito_referencia.substring(0, 200)) + '…</p>';
+          }
+          html += '</div>';
+        });
+      }
+
+      // IDs salvos
+      if (res.questoesSalvas && res.questoesSalvas.length) {
+        html += '<p style="margin-top:12px;font-size:11px;color:#5f6368;">IDs no banco: ';
+        res.questoesSalvas.forEach(function(q) {
+          html += '<code style="background:#e8f0fe;padding:1px 5px;border-radius:3px;margin:0 2px;">' +
+                  escapeHtml(q.id) + '</code> ';
+        });
+        html += '</p>';
+      }
+
+      html += '</div>';
+      el.innerHTML = html;
+    },
+    '🧠 Gerando e salvando questões com IA...'
+  );
 }
 
 /* CORREÇÃO */

@@ -5,6 +5,58 @@ Colégio Municipal de 1º e 2º Graus de Itabatan | SEME/Mucuri-BA
 
 ---
 
+## v2.1 — Sprint 6 (Abril 2026) — Segurança Aprimorada e Geração de Questões com Salvamento Automático
+
+### Arquivos alterados
+| Arquivo | Tipo | Resumo |
+|---------|------|--------|
+| `src/10_MenuIA.gs` | Feature / Fix | `gerarESalvarQuestoesHTML()` salva no banco; diagnóstico protegido por GESTOR; remove duplicata de bootstrap |
+| `src/12_Seguranca.gs` | Fix | `verificarPermissao()` chama `getUsuarioPapel()` sem argumento (ativa cache + fallback Drive) |
+| `src/17_Usuarios.gs` | Security | Privilégio de escalonamento bloqueado: atribuir papel ADMIN exige que o solicitante também seja ADMIN |
+| `src/WebApp.html` | Feature | Banner de bootstrap admin; aviso de acesso limitado; formulário de questões expandido; salvamento automático no banco |
+
+### Detalhes
+
+**`10_MenuIA.gs` — Gerador de questões com persistência**
+- Nova função `gerarESalvarQuestoesHTML(dados)` substitui `gerarQuestoesTextoHTML(texto)` como chamada principal
+  - Aceita `{ texto, componente, ano, habilidade?, dificuldade }` (contexto pedagógico completo)
+  - Prompt enriquecido com componente curricular, ano, BNCC (quando fornecida), dificuldade e Taxonomia de Bloom
+  - Chama `chamarGeminiJSON()` → estrutura JSON `{ objetivas[], discursivas[] }`
+  - Itera e salva cada questão no Banco via `salvarQuestaoNoBanco()` com tratamento de erro por questão
+  - Retorna `{ sucesso, total, questoesSalvas, questoes }` incluindo IDs gerados
+- `gerarQuestoesTextoHTML()` marcada como `@deprecated` (mantida para compatibilidade)
+- `executarDiagnosticoHTML()` agora exige `verificarPermissao(PAPEIS.GESTOR)` antes de expor diagnóstico do sistema
+- `registrarMeComoAdminHTML()` removida do arquivo (fonte de verdade é `17_Usuarios.gs`)
+
+**`12_Seguranca.gs` — Correção de fallback no controle de acesso**
+- `verificarPermissao()` passou a chamar `getUsuarioPapel()` **sem** o argumento `email`
+  - Chamada sem argumento ativa o cache de sessão e o fallback para proprietário do Drive
+  - Chamada com `email` desabilitava `ehAtivo` e ignorava o fallback de emergência
+  - Garante comportamento correto na primeira execução (antes de qualquer usuário ser cadastrado)
+
+**`17_Usuarios.gs` — Proteção contra escalonamento de privilégios**
+- `adicionarUsuarioAoPapel(email, papel)` ganhou verificação extra:
+  - Atribuir `PAPEIS.ADMIN` agora requer `verificarPermissao(PAPEIS.ADMIN)` além de GESTOR
+  - Impede que um gestor promova alguém a administrador sem ser admin ele mesmo
+  - Segue o princípio de menor privilégio (OWASP A01:2021)
+
+**`WebApp.html` — UX de primeiro acesso e formulário enriquecido**
+- Banner `#wa-bootstrap-admin`: exibido quando `perfil.ehCadastrado === false`; botão "🔑 Registrar-me como Administrador" chama `wa_registrarMeAdmin()` → recarrega a página após sucesso
+- Banner `#wa-sem-acesso`: exibido quando usuário cadastrado tem nível < GESTOR; mostra o papel atual
+- `wa_init()` estendido: decide qual banner mostrar baseado em `perfil.ehCadastrado` e `perfil.nivelAcesso`
+- Função `wa_registrarMeAdmin()` adicionada no frontend (chamava `registrarMeComoAdminHTML` no backend)
+- Formulário de Questões expandido:
+  - Campo **Componente Curricular** (select com 9 opções incluindo EJA)
+  - Campo **Ano / Série** (select 1º–9º Ano + EJA Segmentos I e II)
+  - Campo **Habilidade BNCC** (input opcional, `text-transform: uppercase`)
+  - Campo **Dificuldade** (Fácil / Médio / Difícil, padrão Médio)
+- `wa_gerarQuestoes()` atualizado para chamar `gerarESalvarQuestoesHTML` e renderizar resultado estruturado:
+  - Questões objetivas com alternativas coloridas (gabarito em verde)
+  - Questões discursivas com resposta de referência
+  - Badges com IDs salvos no banco
+
+---
+
 ## v2.0 — Sprint 5 (Abril 2026) — Controle de Acesso Completo
 
 ### Commit: `136d99f`
