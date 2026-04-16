@@ -185,4 +185,133 @@ function carregarTurmas(selectId) {
     preencherSelect(selectId, turmas || [], '— Selecione a turma —');
   }, 'Carregando turmas...');
 }
+
+/* ── BNCC AUTOCOMPLETE ENGINE ───────────────────────────── */
+
+window._bnccData    = null;
+window._bnccLoading = false;
+window._bnccQueue   = [];
+
+/** Carrega catálogo BNCC do servidor uma única vez e executa callbacks */
+function _carregarCacheBNCC(cb) {
+  if (window._bnccData !== null) { if (cb) cb(); return; }
+  if (cb) window._bnccQueue.push(cb);
+  if (window._bnccLoading) return;
+  window._bnccLoading = true;
+  google.script.run
+    .withSuccessHandler(function(dados) {
+      window._bnccData    = dados || [];
+      window._bnccLoading = false;
+      window._bnccQueue.forEach(function(f) { f(); });
+      window._bnccQueue   = [];
+    })
+    .withFailureHandler(function() {
+      window._bnccData    = [];
+      window._bnccLoading = false;
+      window._bnccQueue   = [];
+    })
+    .listarTodosBNCCAutocompleteHTML();
+}
+
+/**
+ * Inicializa autocomplete BNCC em um campo de texto.
+ * Cria dropdown de sugestões ao digitar e preview ao selecionar.
+ * @param {string} inputId — ID do input
+ */
+function initBNCCAutocomplete(inputId) {
+  var input = document.getElementById(inputId);
+  if (!input || input._bnccInit) return;
+  input._bnccInit = true;
+
+  // Envolve o input num wrapper relativo (necessário para o dropdown absoluto)
+  var wrapper = document.createElement('div');
+  wrapper.className = 'bncc-autocomplete';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+
+  // Dropdown de sugestões
+  var dd = document.createElement('div');
+  dd.className = 'bncc-dropdown';
+  dd.style.display = 'none';
+  wrapper.appendChild(dd);
+
+  // Card de preview (exibido após seleção, abaixo do wrapper)
+  var preview = document.createElement('div');
+  preview.className = 'bncc-preview';
+  preview.style.display = 'none';
+  wrapper.parentNode.insertBefore(preview, wrapper.nextSibling);
+
+  function fechar() { dd.style.display = 'none'; }
+
+  function mostrar(q) {
+    if (!window._bnccData || !q || q.length < 2) { fechar(); return; }
+    var upper = q.toUpperCase();
+    var lower = upper.toLowerCase();
+    var lista = window._bnccData.filter(function(h) {
+      return h.codigo.indexOf(upper) !== -1
+          || h.descricao.toLowerCase().indexOf(lower) !== -1
+          || h.componente.toLowerCase().indexOf(lower) !== -1
+          || h.anoSerie.toLowerCase().indexOf(lower) !== -1;
+    }).slice(0, 8);
+    if (!lista.length) { fechar(); return; }
+    dd.innerHTML = '';
+    lista.forEach(function(h) {
+      var item = document.createElement('div');
+      item.className = 'bncc-item';
+      var desc = h.descricao.length > 110 ? h.descricao.substring(0, 110) + '…' : h.descricao;
+      item.innerHTML =
+        '<div class="bncc-item-codigo">' + h.codigo + '</div>' +
+        '<div class="bncc-item-meta">' + escapeHtml(h.componente) + ' · ' + escapeHtml(h.anoSerie) + '</div>' +
+        '<div class="bncc-item-desc">' + escapeHtml(desc) + '</div>';
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault(); // evita blur antes do click registrar
+        input.value = h.codigo;
+        fechar();
+        _mostrarPreviewBNCC(preview, h);
+        input.dispatchEvent(new Event('change'));
+      });
+      dd.appendChild(item);
+    });
+    dd.style.display = 'block';
+  }
+
+  // Pré-carrega catálogo ao focar no campo pela primeira vez
+  input.addEventListener('focus', function() { _carregarCacheBNCC(); });
+
+  input.addEventListener('input', function() {
+    var q = input.value.trim();
+    preview.style.display = 'none';
+    if (!window._bnccData) {
+      _carregarCacheBNCC(function() { mostrar(q); });
+    } else {
+      mostrar(q);
+    }
+  });
+
+  // Ao perder foco: fecha dropdown e exibe preview se código válido
+  input.addEventListener('blur', function() {
+    setTimeout(fechar, 200);
+    var val = input.value.trim().toUpperCase();
+    if (val.length >= 6 && window._bnccData) {
+      var found = null;
+      for (var i = 0; i < window._bnccData.length; i++) {
+        if (window._bnccData[i].codigo === val) { found = window._bnccData[i]; break; }
+      }
+      if (found) _mostrarPreviewBNCC(preview, found);
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!wrapper.contains(e.target)) fechar();
+  });
+}
+
+/** Exibe card de preview com os dados da habilidade selecionada */
+function _mostrarPreviewBNCC(el, h) {
+  el.innerHTML =
+    '<span class="bncc-preview-codigo">' + h.codigo + '</span>' +
+    ' · ' + escapeHtml(h.componente) + ' · ' + escapeHtml(h.anoSerie) +
+    '<div>' + escapeHtml(h.descricao) + '</div>';
+  el.style.display = 'block';
+}
 </script>

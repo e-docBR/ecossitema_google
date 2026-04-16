@@ -404,6 +404,10 @@
       <span class="nav-icon">🔧</span>
       <span class="nav-label">Configurações</span>
     </a>
+    <a class="nav-item" data-page="configurar-ia" onclick="irPara('configurar-ia')">
+      <span class="nav-icon">🤖</span>
+      <span class="nav-label">Configurar IA</span>
+    </a>
     <a class="nav-item" data-page="sistema" onclick="irPara('sistema')">
       <span class="nav-icon">⚙️</span>
       <span class="nav-label">Diagnóstico</span>
@@ -1069,8 +1073,18 @@
         <p class="text-muted" style="margin-bottom:14px;">Execute após o Setup Inicial para habilitar as ferramentas.</p>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <button class="btn btn-secondary" onclick="wa_popularBNCC()">
-            📚 Popular Catálogo BNCC (~60 habilidades)
+            📚 Popular Catálogo BNCC (~180 habilidades)
           </button>
+
+          <div style="background:#f8f9fa;border:1px solid var(--cor-borda);border-radius:var(--raio);padding:12px;">
+            <div style="font-size:12px;font-weight:500;margin-bottom:8px;">📥 Importar BNCC de planilha externa</div>
+            <div style="font-size:11px;color:var(--cor-texto-sec);margin-bottom:8px;">Cole o ID ou a URL da planilha Google Sheets com todas as habilidades. A aba deve se chamar "Habilidades".</div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="wa-bncc-import-id" placeholder="ID ou URL da planilha" style="flex:1;font-size:12px;">
+              <button class="btn btn-secondary btn-sm" onclick="wa_importarBNCCPlanilha()" style="white-space:nowrap;">⬆ Importar</button>
+            </div>
+          </div>
+
           <button class="btn btn-secondary" onclick="wa_popularTeste()">
             🧪 Inserir Turmas e Alunos de Teste
           </button>
@@ -1079,6 +1093,84 @@
           </button>
         </div>
         <div id="wa-cfg-seed" class="resultado-container mt-16"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ CONFIGURAR IA ═══ -->
+    <div class="pagina-webapp" id="wa-configurar-ia">
+      <div class="page-title">🤖 Configurar IA</div>
+      <div class="page-subtitle">Selecione o provider de IA e configure as credenciais.</div>
+
+      <!-- Badge provider ativo -->
+      <div id="wa-ia-badge" style="margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:500;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;">⏳ Carregando...</div>
+
+      <div class="form-card">
+        <h3>Provider de IA</h3>
+        <div class="radio-group" style="display:flex;flex-direction:column;gap:10px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;">
+            <input type="radio" name="wa-ia-provider" value="gemini" onchange="wa_atualizarCamposProvider()">
+            <span>🔵 <strong>Google Gemini</strong></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;">
+            <input type="radio" name="wa-ia-provider" value="openrouter" onchange="wa_atualizarCamposProvider()">
+            <span>🟣 <strong>OpenRouter</strong> <span style="color:#888;font-size:12px;">(Claude, GPT-4o, Llama e outros)</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;">
+            <input type="radio" name="wa-ia-provider" value="ollama" onchange="wa_atualizarCamposProvider()">
+            <span>🟠 <strong>Ollama</strong> <span style="color:#888;font-size:12px;">(servidor local via URL pública)</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Campos Gemini -->
+      <div class="form-card wa-ia-campos" id="wa-ia-campos-gemini">
+        <h3>🔑 Chave API Gemini</h3>
+        <div class="campo">
+          <label for="wa-ia-gemini-key">Chave (Google AI Studio)</label>
+          <input type="password" id="wa-ia-gemini-key" placeholder="AIza..." autocomplete="off">
+          <div class="hint">Obtida em <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></div>
+        </div>
+      </div>
+
+      <!-- Campos OpenRouter -->
+      <div class="form-card wa-ia-campos" id="wa-ia-campos-openrouter" style="display:none;">
+        <h3>🟣 OpenRouter</h3>
+        <div class="campo">
+          <label for="wa-ia-or-key">Chave API</label>
+          <input type="password" id="wa-ia-or-key" placeholder="sk-or-..." autocomplete="off">
+          <div class="hint">Obtida em <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
+        </div>
+        <div class="campo">
+          <label for="wa-ia-or-model">Modelo</label>
+          <input type="text" id="wa-ia-or-model" placeholder="anthropic/claude-3.5-sonnet">
+          <div class="hint">Exemplos: <code>anthropic/claude-3.5-sonnet</code> &nbsp; <code>openai/gpt-4o</code> &nbsp; <code>meta-llama/llama-3.3-70b-instruct</code><br>Veja todos em <a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a></div>
+        </div>
+      </div>
+
+      <!-- Campos Ollama -->
+      <div class="form-card wa-ia-campos" id="wa-ia-campos-ollama" style="display:none;">
+        <h3>🟠 Ollama</h3>
+        <div style="padding:10px 14px;background:#fff3e0;border:1px solid #ffcc80;border-radius:6px;font-size:13px;color:#e65100;margin-bottom:14px;">
+          ⚠️ <strong>Atenção:</strong> Apps Script roda nos servidores do Google, não localmente. O Ollama precisa estar acessível via URL pública (IP fixo, domínio, ou tunnel como Cloudflare Tunnel / ngrok).
+        </div>
+        <div class="campo">
+          <label for="wa-ia-ollama-ep">URL pública do servidor</label>
+          <input type="url" id="wa-ia-ollama-ep" placeholder="https://meu-servidor.exemplo.com:11434">
+          <div class="hint">Inclua protocolo e porta, sem barra final.</div>
+        </div>
+        <div class="campo">
+          <label for="wa-ia-ollama-model">Modelo</label>
+          <input type="text" id="wa-ia-ollama-model" placeholder="llama3.2">
+          <div class="hint">Nome do modelo instalado. Ex: <code>llama3.2</code>, <code>mistral</code>, <code>phi4</code></div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-primary" style="flex:1" onclick="wa_salvarConfiguracaoIA()">💾 Salvar</button>
+          <button class="btn btn-secondary" style="flex:1" onclick="wa_testarProviderIA()">🔍 Testar Conexão</button>
+        </div>
+        <div id="wa-ia-resultado" class="resultado-container mt-16"></div>
       </div>
     </div>
 
@@ -1138,6 +1230,9 @@ function wa_init() {
 
   // Carregar dashboard
   wa_carregarDashboard();
+
+  // Autocomplete BNCC em todos os campos de habilidade
+  ['wa-plano-bncc', 'wa-corr-bncc', 'wa-diag-bncc', 'wa-lote-bncc'].forEach(initBNCCAutocomplete);
 }
 
 document.addEventListener('DOMContentLoaded', wa_init);
@@ -1160,6 +1255,7 @@ function irPara(pagina) {
 
   // Inicializar página conforme necessário
   if (pagina === 'configuracoes') wa_carregarStatusConfig();
+  if (pagina === 'configurar-ia') wa_carregarConfiguracaoIA();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1170,7 +1266,7 @@ function wa_carregarDashboard() {
     var cards = [
       { icon: '👥', valor: d.turmasAtivas, label: 'Turmas Ativas',    status: d.turmasAtivas > 0 ? 'ok' : 'warn' },
       { icon: '📚', valor: d.bnccCount,    label: 'Habilidades BNCC', status: d.bnccCount > 0 ? 'ok' : 'warn' },
-      { icon: '🤖', valor: d.geminiOk ? '✅' : '❌', label: 'API Gemini',  status: d.geminiOk ? 'ok' : 'erro' },
+      { icon: '🤖', valor: d.geminiOk ? '✅' : '❌', label: 'API de IA',    status: d.geminiOk ? 'ok' : 'erro' },
       { icon: '📁', valor: d.pastasOk ? '✅' : '❌', label: 'Pastas Drive', status: d.pastasOk ? 'ok' : 'warn' },
       { icon: '📊', valor: d.planilhasOk ? '✅' : '❌', label: 'Planilhas', status: d.planilhasOk ? 'ok' : 'warn' },
       { icon: '📧', valor: d.emailOk ? '✅' : '❌', label: 'E-mail Coord.', status: d.emailOk ? 'ok' : 'warn' }
@@ -1208,6 +1304,10 @@ function wa_enviarPlano() {
     mostrarToast('Preencha todos os campos obrigatórios.', 'erro'); return;
   }
   chamarServidor('gerarPlanoDeAulaHTML', [dados], function(res) {
+    if (res.erro) {
+      document.getElementById('wa-resultado-plano').innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     wa_resultado('wa-resultado-plano', '✅ Plano de Aula Gerado!', res.url,
       'Salvo em 01_PLANEJAMENTO no Drive.');
   }, '📝 Gerando plano de aula com IA...');
@@ -1220,11 +1320,11 @@ function wa_gerarQuestoes() {
     mostrarToast('Forneça pelo menos um parágrafo de texto.', 'erro'); return;
   }
   chamarServidor('gerarQuestoesTextoHTML', [texto], function(res) {
+    var el = document.getElementById('wa-resultado-questoes');
     if (res.sucesso) {
-      document.getElementById('wa-resultado-questoes').innerHTML =
-        '<div class="resultado-webapp"><pre>' + escapeHtml(res.questoes) + '</pre></div>';
+      el.innerHTML = '<div class="resultado-webapp"><pre>' + escapeHtml(res.questoes) + '</pre></div>';
     } else {
-      mostrarToast(res.mensagem, 'erro');
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
     }
   }, '🧠 Gerando questões com IA...');
 }
@@ -1238,15 +1338,16 @@ function wa_corrigir() {
     mostrarToast('Preencha todos os campos.', 'erro'); return;
   }
   chamarServidor('corrigirTextoHTML', [resposta, enunciado, bncc], function(res) {
+    var el = document.getElementById('wa-resultado-correcao');
     if (res.sucesso) {
-      document.getElementById('wa-resultado-correcao').innerHTML =
+      el.innerHTML =
         '<div class="resultado-webapp">' +
         '<p><strong>Nota sugerida: ' + escapeHtml(String(res.nota_sugerida)) + '/10</strong> <span class="chip">Requer revisão</span></p>' +
         '<p style="margin-top:10px;"><strong>Feedback para o aluno:</strong><br>' + escapeHtml(res.feedback_aluno) + '</p>' +
         '<p style="margin-top:10px;color:#5f6368;"><strong>Observação para o professor:</strong><br><em>' + escapeHtml(res.observacao_professor) + '</em></p>' +
         '</div>';
     } else {
-      mostrarToast(res.mensagem, 'erro');
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
     }
   }, '✅ Avaliando resposta com IA...');
 }
@@ -1258,11 +1359,11 @@ function wa_adaptar() {
   if (!tipo) { mostrarToast('Selecione o tipo de adaptação.', 'erro'); return; }
   if (!texto) { mostrarToast('Forneça o conteúdo a adaptar.', 'erro'); return; }
   chamarServidor('adaptarConteudoTextoHTML', [tipo, texto], function(res) {
+    var el = document.getElementById('wa-resultado-adaptar');
     if (res.sucesso) {
-      document.getElementById('wa-resultado-adaptar').innerHTML =
-        '<div class="resultado-webapp"><pre>' + escapeHtml(res.adaptado) + '</pre></div>';
+      el.innerHTML = '<div class="resultado-webapp"><pre>' + escapeHtml(res.adaptado) + '</pre></div>';
     } else {
-      mostrarToast(res.mensagem, 'erro');
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
     }
   }, '♿ Adaptando conteúdo com IA...');
 }
@@ -1272,6 +1373,10 @@ function wa_relatorio() {
   var turma = _v('wa-rel-turma'), comp = _v('wa-rel-componente'), bim = _v('wa-rel-bimestre');
   if (!turma || !comp || !bim) { mostrarToast('Preencha todos os campos.', 'erro'); return; }
   chamarServidor('gerarRelatorioTurmaHTML', [turma, comp, bim], function(res) {
+    if (res.erro) {
+      document.getElementById('wa-resultado-relatorio').innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     wa_resultado('wa-resultado-relatorio', '✅ Relatório Gerado!', res.url,
       'Versão pública e versão professor em 03_RESULTADOS.');
   }, '📊 Gerando relatório...');
@@ -1282,6 +1387,10 @@ function wa_diagnostico() {
   var comp = _v('wa-diag-componente'), ano = _v('wa-diag-ano'), bncc = _v('wa-diag-bncc').toUpperCase();
   if (!comp || !ano || !bncc) { mostrarToast('Preencha todos os campos.', 'erro'); return; }
   chamarServidor('criarDiagnosticoFormativoHTML', [comp, ano, bncc], function(res) {
+    if (res.erro) {
+      document.getElementById('wa-resultado-diagnostico').innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     wa_resultado('wa-resultado-diagnostico', '✅ Diagnóstico Criado!', res.url, '5 questões diagnósticas no Drive.');
   }, '🎯 Criando diagnóstico...');
 }
@@ -1291,6 +1400,10 @@ function wa_comunicado() {
   var motivo = _v('wa-com-motivo');
   if (!motivo) { mostrarToast('Descreva o motivo.', 'erro'); return; }
   chamarServidor('redigirComunicadoFamiliaHTML', [motivo], function(res) {
+    if (res.erro) {
+      document.getElementById('wa-resultado-comunicado').innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     wa_resultado('wa-resultado-comunicado', '✅ Comunicado Gerado!', res.url, 'Salvo no Drive.');
   }, '📧 Redigindo comunicado...');
 }
@@ -1300,6 +1413,10 @@ function wa_pauta() {
   var turma = _v('wa-pauta-turma'), bim = _v('wa-pauta-bimestre');
   if (!turma || !bim) { mostrarToast('Preencha turma e bimestre.', 'erro'); return; }
   chamarServidor('gerarPautaReuniaoHTML', [turma, bim], function(res) {
+    if (res.erro) {
+      document.getElementById('wa-resultado-pauta').innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     wa_resultado('wa-resultado-pauta', '✅ Pauta Criada!', res.url, 'Documento salvo no Drive.');
   }, '📋 Gerando pauta...');
 }
@@ -1320,6 +1437,10 @@ function wa_pei() {
     mostrarToast('Preencha nome, turma e tipo de NEE.', 'erro'); return;
   }
   chamarServidor('gerarPEIHTML', [dados], function(res) {
+    if (res.erro) {
+      document.getElementById('wa-resultado-pei').innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     wa_resultado('wa-resultado-pei', '✅ PEI Gerado!', res.url, 'Salvo em 04_ALUNOS/PEI_PDI/ (acesso restrito — LGPD).');
   }, '📄 Gerando PEI com IA...');
 }
@@ -1329,11 +1450,16 @@ function wa_prova() {
   var id = _v('wa-prova-gabarito'), prazo = _v('wa-prova-prazo') || null;
   if (!id) { mostrarToast('Informe o ID do gabarito.', 'erro'); return; }
   chamarServidor('criarProvaDigitalHTML', [id, prazo], function(res) {
-    document.getElementById('wa-resultado-prova').innerHTML =
+    var el = document.getElementById('wa-resultado-prova');
+    if (res.erro) {
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
+    el.innerHTML =
       '<div class="resultado-webapp">' +
       '✅ Prova criada!<br>' +
       '📋 <strong>Link para alunos:</strong> <a href="' + escapeHtml(res.urlForm) + '" target="_blank">' + escapeHtml(res.urlForm) + '</a>' +
-      '<br><button class="btn btn-sm btn-copiar mt-8" onclick="copiarTexto(\'' + escapeHtml(res.urlForm) + '\')">📋 Copiar link</button>' +
+      '<br><button class="btn btn-sm btn-copiar mt-8" data-copiar="' + escapeHtml(res.urlForm) + '" onclick="copiarTexto(this.getAttribute(\'data-copiar\'))">📋 Copiar link</button>' +
       '<br><br>✏️ <a href="' + escapeHtml(res.urlEditar) + '" target="_blank">Editar formulário</a>' +
       '</div>';
   }, '📜 Criando prova digital...');
@@ -1344,9 +1470,14 @@ function wa_lote() {
   var pasta = _v('wa-lote-pasta'), enc = _v('wa-lote-enunciado'), bncc = _v('wa-lote-bncc').toUpperCase();
   if (!pasta || !enc || !bncc) { mostrarToast('Preencha todos os campos.', 'erro'); return; }
   chamarServidor('corrigirLoteHTML', [pasta, enc, bncc], function(res) {
+    var el = document.getElementById('wa-resultado-lote');
+    if (res.erro) {
+      el.innerHTML = '<div class="resultado-webapp erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      return;
+    }
     var info = '✅ <strong>' + res.totalCorrigidos + '</strong> corrigida(s), <strong>' + res.totalErros + '</strong> erro(s)';
     if (res.urlRelatorio) info += '<br><a href="' + escapeHtml(res.urlRelatorio) + '" target="_blank">📄 Ver relatório</a>';
-    document.getElementById('wa-resultado-lote').innerHTML = '<div class="resultado-webapp">' + info + '</div>';
+    el.innerHTML = '<div class="resultado-webapp">' + info + '</div>';
   }, '📚 Corrigindo redações...\nIsso pode levar alguns minutos.');
 }
 
@@ -1451,8 +1582,8 @@ function wa_gerarForm() {
       document.getElementById('wa-freq-resumo').innerHTML =
         '<div class="resultado-webapp">✅ Form criado!<br>' +
         '<a href="' + escapeHtml(res.url) + '" target="_blank">📋 Abrir formulário</a>' +
-        ' <button class="btn btn-sm btn-copiar" style="margin-left:8px;" onclick="copiarTexto(\'' +
-        escapeHtml(res.url) + '\')">📋 Copiar</button></div>';
+        ' <button class="btn btn-sm btn-copiar" style="margin-left:8px;" data-copiar="' +
+        escapeHtml(res.url) + '" onclick="copiarTexto(this.getAttribute(\'data-copiar\'))">📋 Copiar</button></div>';
     } else {
       mostrarToast(res.mensagem, 'erro');
     }
@@ -1585,6 +1716,25 @@ function wa_popularBNCC() {
   });
 }
 
+function wa_importarBNCCPlanilha() {
+  var input = document.getElementById('wa-bncc-import-id');
+  var id = (input ? input.value.trim() : '');
+  if (!id) { mostrarToast('Informe o ID ou a URL da planilha de origem.', 'erro'); return; }
+  // Aceita URL completa — extrai só o ID
+  var match = id.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) id = match[1];
+  var box = document.getElementById('wa-cfg-seed');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Importando habilidades BNCC...</div>';
+  chamarServidor('importarBNCCDePlanilhaHTML', [id], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) {
+      if (input) input.value = '';
+      setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 800);
+    }
+  }, '📥 Importando BNCC...');
+}
+
 function wa_popularTeste() {
   var box = document.getElementById('wa-cfg-seed');
   box.innerHTML = '<div class="resultado-webapp">⏳ Inserindo dados de teste...</div>';
@@ -1604,6 +1754,87 @@ function wa_limparTeste() {
       (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
     if (res.sucesso) setTimeout(function(){ wa_carregarStatusConfig(); wa_carregarDashboard(); }, 600);
   });
+}
+
+/* ═══════ CONFIGURAR IA ════════════════════════════════════ */
+
+function wa_carregarConfiguracaoIA() {
+  chamarServidor('getConfiguracaoIAHTML', [], function(cfg) {
+    if (!cfg || cfg.erro) return;
+    // Selecionar radio do provider ativo
+    var radios = document.querySelectorAll('input[name="wa-ia-provider"]');
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].checked = (radios[i].value === cfg.provedorAtivo);
+    }
+    wa_atualizarCamposProvider();
+    if (cfg.openRouterModel) document.getElementById('wa-ia-or-model').value = cfg.openRouterModel;
+    if (cfg.ollamaEndpoint)  document.getElementById('wa-ia-ollama-ep').value = cfg.ollamaEndpoint;
+    if (cfg.ollamaModel)     document.getElementById('wa-ia-ollama-model').value = cfg.ollamaModel;
+    // Badge
+    var badge = document.getElementById('wa-ia-badge');
+    var nomes = { gemini: '🔵 Google Gemini', openrouter: '🟣 OpenRouter', ollama: '🟠 Ollama' };
+    var nome  = nomes[cfg.provedorAtivo] || cfg.provedorAtivo;
+    var ok = cfg.provedorAtivo === 'gemini' ? cfg.geminiKeyOk
+           : cfg.provedorAtivo === 'openrouter' ? cfg.openRouterKeyOk
+           : cfg.ollamaEndpointOk;
+    badge.style.background  = ok ? '#e8f5e9' : '#fff3e0';
+    badge.style.color        = ok ? '#2e7d32' : '#e65100';
+    badge.style.borderColor  = ok ? '#a5d6a7' : '#ffcc80';
+    badge.textContent = 'Provider ativo: ' + nome + (ok ? ' ✅' : ' ⚠️ chave/endpoint pendente');
+  });
+}
+
+function wa_atualizarCamposProvider() {
+  var selecionado = '';
+  var radios = document.querySelectorAll('input[name="wa-ia-provider"]');
+  for (var i = 0; i < radios.length; i++) { if (radios[i].checked) { selecionado = radios[i].value; break; } }
+  if (!selecionado) return;
+  var todos = document.querySelectorAll('.wa-ia-campos');
+  for (var j = 0; j < todos.length; j++) { todos[j].style.display = 'none'; }
+  var alvo = document.getElementById('wa-ia-campos-' + selecionado);
+  if (alvo) alvo.style.display = 'block';
+}
+
+function wa_salvarConfiguracaoIA() {
+  var selecionado = '';
+  var radios = document.querySelectorAll('input[name="wa-ia-provider"]');
+  for (var i = 0; i < radios.length; i++) { if (radios[i].checked) { selecionado = radios[i].value; break; } }
+  if (!selecionado) { alert('Selecione um provider.'); return; }
+  var dados = { provedorAtivo: selecionado };
+  if (selecionado === 'gemini') {
+    var k = document.getElementById('wa-ia-gemini-key').value.trim();
+    if (k) dados.geminiKey = k;
+  } else if (selecionado === 'openrouter') {
+    var ok = document.getElementById('wa-ia-or-key').value.trim();
+    var om = document.getElementById('wa-ia-or-model').value.trim();
+    if (ok) dados.openRouterKey = ok;
+    if (om) dados.openRouterModel = om;
+  } else if (selecionado === 'ollama') {
+    var oe = document.getElementById('wa-ia-ollama-ep').value.trim();
+    var omod = document.getElementById('wa-ia-ollama-model').value.trim();
+    if (oe) dados.ollamaEndpoint = oe;
+    if (omod) dados.ollamaModel = omod;
+  }
+  var box = document.getElementById('wa-ia-resultado');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Salvando...</div>';
+  chamarServidor('salvarConfiguracaoIAHTML', [dados], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) {
+      document.getElementById('wa-ia-gemini-key').value = '';
+      document.getElementById('wa-ia-or-key').value = '';
+      setTimeout(wa_carregarConfiguracaoIA, 500);
+    }
+  }, '💾 Salvando configuração de IA...');
+}
+
+function wa_testarProviderIA() {
+  var box = document.getElementById('wa-ia-resultado');
+  box.innerHTML = '<div class="resultado-webapp">⏳ Testando conexão...</div>';
+  chamarServidor('testarProviderIAHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado-webapp' + (res.sucesso ? '' : ' erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+  }, '🔍 Testando provider de IA...');
 }
 
 /* ═══════ DIAGNÓSTICO SISTEMA ═══════════════════════════════ */
@@ -1647,7 +1878,7 @@ function wa_resultado(containerId, titulo, url, info) {
   var html = '<div class="resultado-webapp">✅ <strong>' + escapeHtml(titulo) + '</strong>';
   if (url) {
     html += '<br><a href="' + escapeHtml(url) + '" target="_blank">' + escapeHtml(url) + '</a>' +
-      '<button class="btn btn-sm btn-copiar mt-8" onclick="copiarTexto(\'' + escapeHtml(url) + '\')">📋 Copiar link</button>';
+      '<button class="btn btn-sm btn-copiar mt-8" data-copiar="' + escapeHtml(url) + '" onclick="copiarTexto(this.getAttribute(\'data-copiar\'))">📋 Copiar link</button>';
   }
   if (info) html += '<br><span style="color:#5f6368;font-size:12px;">' + escapeHtml(info) + '</span>';
   html += '</div>';

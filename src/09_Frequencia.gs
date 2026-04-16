@@ -426,8 +426,7 @@ REGRAS:
       const pastaAlunos = DriveApp.getFolderById(idAlunos);
       const pastaPEI = buscarOuCriarPasta('PEI_PDI', pastaAlunos);
       const arquivo = DriveApp.getFileById(doc.getId());
-      pastaPEI.addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
+      arquivo.moveTo(pastaPEI);  // BUG-04: usar moveTo (Drive API v3)
 
       // Restringir acesso (LGPD — dado sensível)
       arquivo.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
@@ -527,8 +526,7 @@ ${dadosAluno.isEJA ? '• Para EJA: valorize experiências de vida e autonomia d
       const pastaAlunos = DriveApp.getFolderById(idAlunos);
       const pastaPEI = buscarOuCriarPasta('PEI_PDI', pastaAlunos);
       const arquivo = DriveApp.getFileById(doc.getId());
-      pastaPEI.addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
+      arquivo.moveTo(pastaPEI);  // BUG-04: usar moveTo (Drive API v3)
       arquivo.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
     } catch (e) {
       registrarLog('ALERTA', 'PEI não movido para pasta protegida: ' + e.message);

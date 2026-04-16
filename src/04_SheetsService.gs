@@ -26,7 +26,8 @@ const ABAS = Object.freeze({
   TURMAS_ALUNOS: {
     MATRICULAS:  'Matrículas',
     FREQUENCIA:  'Frequência',
-    TURMAS:      'Turmas'
+    TURMAS:      'Turmas',
+    PROFESSORES: 'Professores'   // Sprint 3
   },
   RESULTADOS: {
     NOTAS:      'Notas',
@@ -306,9 +307,15 @@ function criarCabecalhosPlanilha(spreadsheetId, nomePlanilha) {
 function _obterSchemasPlanilhas() {
   return {
     MASTER_BNCC: {
+      // v2: 19 colunas — compatível com schema v1 (7 colunas) via auto-detecção em 02_BNCCService.gs
       'Habilidades': [
         'Codigo_BNCC', 'Componente', 'Ano_Serie', 'Campo_Tematico',
-        'Descricao_Habilidade', 'Nivel_Bloom', 'Ativo'
+        'Descricao_Habilidade', 'Nivel_Bloom', 'Ativo',
+        // Colunas v2 (Sprint 4)
+        'Segmento', 'Unidade_Tematica', 'Objeto_Conhecimento',
+        'Competencias_Gerais', 'Competencias_Area', 'Palavras_Chave',
+        'Codigo_Anterior', 'Codigo_Posterior', 'Codigo_EJA_Equivalente',
+        'Descritores_SAEB', 'Total_Usos', 'Ultima_Atualizacao'
       ],
       'Descritores_SAEB': [
         'Codigo_BNCC', 'Descritor_SAEB', 'Codigo_Descritor', 'Prova_Referencia'
@@ -343,6 +350,12 @@ function _obterSchemasPlanilhas() {
       'Turmas': [
         'Codigo_Turma', 'Nome_Turma', 'Segmento', 'Turno',
         'Professor_Titular', 'Total_Alunos', 'Ano_Letivo', 'Ativa'
+      ],
+      // Sprint 3: registro centralizado de professores
+      'Professores': [
+        'Email', 'Nome_Completo', 'Componentes', 'Turmas',
+        'Papel', 'Ativo', 'Data_Cadastro', 'ID_Pasta_Drive',
+        'Formacao', 'Telefone', 'Observacoes'
       ]
     },
     RESULTADOS: {
@@ -363,4 +376,100 @@ function _obterSchemasPlanilhas() {
       ]
     }
   };
+}
+
+// ============================================================
+// HELPERS SPRINT 3 — PROFESSORES
+// ============================================================
+
+/**
+ * Lê os dados da aba Professores em TURMAS_ALUNOS.
+ * Usado por 16_PastaProfessor.gs para criação em lote.
+ *
+ * @param {boolean} [apenasAtivos] - Se true, filtra apenas professores com Ativo=TRUE
+ * @returns {{email, nomeCompleto, componentes, turmas, papel, ativo, idPastaDrive}[]}
+ */
+function lerProfessores(apenasAtivos) {
+  const config = getConfig();
+  if (!config.SHEETS.TURMAS_ALUNOS) return [];
+  try {
+    const dados = lerAba(config.SHEETS.TURMAS_ALUNOS, ABAS.TURMAS_ALUNOS.PROFESSORES);
+    return dados.slice(1)
+      .filter(linha => {
+        if (apenasAtivos) return estaAtivo(linha[5]);
+        return String(linha[0] || '').trim().includes('@');
+      })
+      .map(linha => ({
+        email:        String(linha[0] || '').trim(),
+        nomeCompleto: String(linha[1] || '').trim(),
+        componentes:  String(linha[2] || '').split(',').map(c => c.trim()).filter(Boolean),
+        turmas:       String(linha[3] || '').split(',').map(t => t.trim()).filter(Boolean),
+        papel:        String(linha[4] || 'professor').trim().toLowerCase(),
+        ativo:        estaAtivo(linha[5]),
+        dataCadastro: String(linha[6] || '').trim(),
+        idPastaDrive: String(linha[7] || '').trim(),
+        formacao:     String(linha[8] || '').trim(),
+        telefone:     String(linha[9] || '').trim(),
+        observacoes:  String(linha[10] || '').trim()
+      }))
+      .filter(p => p.email);
+  } catch (e) {
+    registrarLog('ALERTA', 'lerProfessores: ' + e.message);
+    return [];
+  }
+}
+
+/**
+ * Atualiza o ID da pasta Drive de um professor na aba Professores.
+ * Chamado por 16_PastaProfessor.gs após criar a pasta.
+ *
+ * @param {string} email - E-mail do professor
+ * @param {string} idPasta - ID da pasta criada no Drive
+ */
+function atualizarIdPastaProfessor(email, idPasta) {
+  const config = getConfig();
+  if (!config.SHEETS.TURMAS_ALUNOS) return;
+  // Coluna 7 (índice base 0) = ID_Pasta_Drive
+  atualizarLinha(config.SHEETS.TURMAS_ALUNOS, ABAS.TURMAS_ALUNOS.PROFESSORES, 0, email, { 7: idPasta });
+}
+
+// ============================================================
+// HELPERS SPRINT 4 — CONTADOR BNCC
+// ============================================================
+
+/**
+ * Incrementa o contador de uso de uma habilidade BNCC na planilha MASTER_BNCC.
+ * Chamado por 02_BNCCService.gs::registrarUsoHabilidade().
+ * Só opera se o schema v2 estiver presente (coluna Total_Usos).
+ *
+ * @param {string} codigoBNCC - Ex: 'EF06LP05'
+ */
+function atualizarContadorUsoHabilidade(codigoBNCC) {
+  const config = getConfig();
+  if (!config.SHEETS.MASTER_BNCC) return;
+  try {
+    const ss  = SpreadsheetApp.openById(config.SHEETS.MASTER_BNCC);
+    const aba = ss.getSheetByName(ABAS.MASTER_BNCC.HABILIDADES);
+    if (!aba) return;
+
+    const dados = aba.getDataRange().getValues();
+    const cabecalho = dados[0];
+    const colUsos        = cabecalho.indexOf('Total_Usos');
+    const colAtualizacao = cabecalho.indexOf('Ultima_Atualizacao');
+    if (colUsos < 0) return;  // schema v1 — sem coluna de contagem
+
+    const codigo = codigoBNCC.trim().toUpperCase();
+    for (let i = 1; i < dados.length; i++) {
+      if (String(dados[i][0]).trim().toUpperCase() === codigo) {
+        const atual = parseInt(dados[i][colUsos] || 0, 10);
+        aba.getRange(i + 1, colUsos + 1).setValue(atual + 1);
+        if (colAtualizacao >= 0) {
+          aba.getRange(i + 1, colAtualizacao + 1).setValue(formatarData(new Date(), 'dd/MM/yyyy'));
+        }
+        return;
+      }
+    }
+  } catch (e) {
+    registrarLog('ALERTA', `atualizarContadorUsoHabilidade(${codigoBNCC}): ${e.message}`);
+  }
 }

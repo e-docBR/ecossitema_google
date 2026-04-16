@@ -1,10 +1,11 @@
 /**
- * PEDAGOGO.AI — Gateway da API Gemini
+ * PEDAGOGO.AI — Gateway Multi-Provider de IA
  * Arquivo: 05_GeminiService.gs
  * Colégio Municipal de Itabatan | SEME/Mucuri-BA
  *
- * ÚNICO ponto de saída para chamadas à API Gemini.
+ * ÚNICO ponto de saída para chamadas a qualquer API de IA.
  * Nenhum outro módulo deve chamar UrlFetchApp diretamente.
+ * Providers suportados: Gemini, OpenRouter, Ollama.
  * Garante: autenticação segura, logging, retry, e controle de dados (LGPD).
  *
  * Referência: Bloco 2.2 (endpoint), Bloco 6.1 (system prompt),
@@ -12,7 +13,7 @@
  */
 
 // ============================================================
-// CONFIGURAÇÕES DA API
+// CONFIGURAÇÕES DOS PROVIDERS
 // ============================================================
 
 const GEMINI_CONFIG = Object.freeze({
@@ -24,6 +25,27 @@ const GEMINI_CONFIG = Object.freeze({
     maxOutputTokens: 4096,
     topK:            40,
     topP:            0.95
+  }
+});
+
+const OPENROUTER_CONFIG = Object.freeze({
+  ENDPOINT:    'https://openrouter.ai/api/v1/chat/completions',
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 3000,
+  DEFAULTS: {
+    temperature:     0.7,
+    maxOutputTokens: 4096
+  }
+});
+
+const OLLAMA_CONFIG = Object.freeze({
+  // Endpoint montado dinamicamente em _chamarOllama via getOllamaEndpoint()
+  PATH:        '/v1/chat/completions',  // compatível OpenAI
+  MAX_RETRIES: 2,
+  RETRY_DELAY: 2000,
+  DEFAULTS: {
+    temperature:     0.7,
+    maxOutputTokens: 4096
   }
 });
 
@@ -75,12 +97,13 @@ LIMITES INVIOLÁVEIS:
 }
 
 // ============================================================
-// FUNÇÃO PRINCIPAL DE CHAMADA
+// FUNÇÃO PRINCIPAL DE CHAMADA (API pública — não alterar assinatura)
 // ============================================================
 
 /**
- * Realiza uma chamada à API Gemini com retry automático.
- * Esta é a ÚNICA função que deve fazer UrlFetchApp para a API Gemini.
+ * Realiza uma chamada ao provider de IA ativo com retry automático.
+ * Esta é a ÚNICA função que deve fazer UrlFetchApp para qualquer API de IA.
+ * O provider ativo é definido pela propriedade PROVEDOR_IA_ATIVO no PropertiesService.
  *
  * @param {string} prompt - Texto do prompt (sem o system prompt — adicionado automaticamente)
  * @param {Object} [opcoes] - Opções de geração { temperature, maxOutputTokens, incluirSystemPrompt }
@@ -88,12 +111,55 @@ LIMITES INVIOLÁVEIS:
  * @throws {Error} Se a API retornar erro após todas as tentativas
  */
 function chamarGemini(prompt, opcoes) {
-  const config = Object.assign({}, GEMINI_CONFIG.DEFAULTS, opcoes || {});
-  const incluirSystem = opcoes && opcoes.incluirSystemPrompt === false ? false : true;
+  const incluirSystem = !(opcoes && opcoes.incluirSystemPrompt === false);
 
   const promptFinal = incluirSystem
     ? `${construirSystemPrompt()}\n\n---\n\n${prompt}`
     : prompt;
+
+  return _despacharIA(promptFinal, opcoes || {});
+}
+
+// ============================================================
+// DESPACHANTE — roteia para o provider ativo
+// ============================================================
+
+/**
+ * Lê PROVEDOR_IA_ATIVO e despacha para o provider correto.
+ * @param {string} promptFinal - Prompt já com system prompt incluído
+ * @param {Object} opcoes - Opções de geração
+ * @returns {string} Texto gerado
+ */
+function _despacharIA(promptFinal, opcoes) {
+  const provider = getProvedorAtivo();
+
+  switch (provider) {
+    case 'gemini':
+      return _chamarGeminiInterno(promptFinal, opcoes);
+    case 'openrouter':
+      return _chamarOpenRouter(promptFinal, opcoes);
+    case 'ollama':
+      return _chamarOllama(promptFinal, opcoes);
+    default:
+      throw new Error(
+        `Provider de IA desconhecido: "${provider}". ` +
+        'Configure em ⚙️ Configurar IA → Provider. Valores válidos: gemini, openrouter, ollama.'
+      );
+  }
+}
+
+// ============================================================
+// PROVIDER 1 — GEMINI
+// ============================================================
+
+/**
+ * Chamada interna ao Gemini com retry/backoff.
+ * @param {string} promptFinal - Prompt completo
+ * @param {Object} opcoes - Opções de geração
+ * @returns {string} Texto gerado
+ */
+function _chamarGeminiInterno(promptFinal, opcoes) {
+  const config = Object.assign({}, GEMINI_CONFIG.DEFAULTS, opcoes);
 
   const payload = {
     contents: [{
@@ -119,7 +185,6 @@ function chamarGemini(prompt, opcoes) {
   let ultimoErro;
   for (let tentativa = 0; tentativa <= GEMINI_CONFIG.MAX_RETRIES; tentativa++) {
     if (tentativa > 0) {
-      // backoff exponencial: 3s, 6s, 12s
       const delay = GEMINI_CONFIG.RETRY_DELAY * Math.pow(2, tentativa - 1);
       registrarLog('ALERTA', `Tentativa ${tentativa + 1} de chamada ao Gemini — aguardando ${delay}ms`);
       Utilities.sleep(delay);
@@ -136,27 +201,184 @@ function chamarGemini(prompt, opcoes) {
         return texto;
       }
 
-      // Tratar erros específicos
       const erro = _tratarErroGemini(status, response.getContentText());
-      if (status === 429 || status === 503 || status === 500) {
-        ultimoErro = erro;
-        continue;  // Retry em rate limit, serviço indisponível e erros internos
-      }
-
+      if (status === 429) throw new Error(erro);
+      if (status === 503 || status === 500) { ultimoErro = erro; continue; }
       throw new Error(erro);
 
     } catch (e) {
-      if (e.message.includes('Erro')) throw e;  // Erro já tratado
+      if (e.message.includes('Gemini')) throw e;
       ultimoErro = e.message;
       registrarLog('ERRO', `Falha na chamada Gemini (tentativa ${tentativa + 1}): ${e.message}`);
     }
   }
 
-  throw new Error(`Falha após ${GEMINI_CONFIG.MAX_RETRIES + 1} tentativas: ${ultimoErro}`);
+  throw new Error(`Gemini — Falha após ${GEMINI_CONFIG.MAX_RETRIES + 1} tentativas: ${ultimoErro}`);
+}
+
+// ============================================================
+// PROVIDER 2 — OPENROUTER
+// ============================================================
+
+/**
+ * Chamada ao OpenRouter (compatível OpenAI chat completions).
+ * System prompt é enviado como messages[0] com role "system".
+ * @param {string} promptFinal - Prompt completo (já inclui system prompt como texto)
+ * @param {Object} opcoes - Opções de geração
+ * @returns {string} Texto gerado
+ */
+function _chamarOpenRouter(promptFinal, opcoes) {
+  const config = Object.assign({}, OPENROUTER_CONFIG.DEFAULTS, opcoes);
+  const chave  = getOpenRouterKey();
+  const modelo = getOpenRouterModel();
+
+  // OpenRouter usa formato messages[] — separamos system/user para melhor compatibilidade
+  const SEPARADOR = '\n\n---\n\n';
+  let messages;
+  const idx = promptFinal.indexOf(SEPARADOR);
+  if (idx !== -1) {
+    messages = [
+      { role: 'system', content: promptFinal.substring(0, idx) },
+      { role: 'user',   content: promptFinal.substring(idx + SEPARADOR.length) }
+    ];
+  } else {
+    messages = [{ role: 'user', content: promptFinal }];
+  }
+
+  const payload = {
+    model:       modelo,
+    messages:    messages,
+    temperature: config.temperature,
+    max_tokens:  config.maxOutputTokens
+  };
+
+  const opcoesFetch = {
+    method:      'POST',
+    contentType: 'application/json',
+    headers: {
+      'Authorization': `Bearer ${chave}`,
+      'HTTP-Referer':  'https://script.google.com',
+      'X-Title':       'PEDAGOGO.AI'
+    },
+    payload:     JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  let ultimoErro;
+  for (let tentativa = 0; tentativa <= OPENROUTER_CONFIG.MAX_RETRIES; tentativa++) {
+    if (tentativa > 0) {
+      const delay = OPENROUTER_CONFIG.RETRY_DELAY * Math.pow(2, tentativa - 1);
+      registrarLog('ALERTA', `OpenRouter — tentativa ${tentativa + 1} — aguardando ${delay}ms`);
+      Utilities.sleep(delay);
+    }
+
+    try {
+      const response = UrlFetchApp.fetch(OPENROUTER_CONFIG.ENDPOINT, opcoesFetch);
+      const status = response.getResponseCode();
+
+      if (status === 200) {
+        const json = JSON.parse(response.getContentText());
+        const texto = _extrairTextoOpenAI(json, 'OpenRouter');
+        registrarLog('INFO', `OpenRouter (${modelo}) bem-sucedido`, `${texto.length} caracteres gerados`);
+        return texto;
+      }
+
+      const corpo = response.getContentText();
+      const erro  = _tratarErroOpenAI(status, corpo, 'OpenRouter');
+      if (status === 429) throw new Error(erro);
+      if (status === 500 || status === 503) { ultimoErro = erro; continue; }
+      throw new Error(erro);
+
+    } catch (e) {
+      if (e.message.startsWith('OpenRouter')) throw e;
+      ultimoErro = e.message;
+      registrarLog('ERRO', `Falha OpenRouter (tentativa ${tentativa + 1}): ${e.message}`);
+    }
+  }
+
+  throw new Error(`OpenRouter — Falha após ${OPENROUTER_CONFIG.MAX_RETRIES + 1} tentativas: ${ultimoErro}`);
+}
+
+// ============================================================
+// PROVIDER 3 — OLLAMA
+// ============================================================
+
+/**
+ * Chamada ao Ollama via endpoint público (compatível OpenAI /v1/chat/completions).
+ * ATENÇÃO: Apps Script roda nos servidores do Google — Ollama precisa de URL pública.
+ * @param {string} promptFinal - Prompt completo
+ * @param {Object} opcoes - Opções de geração
+ * @returns {string} Texto gerado
+ */
+function _chamarOllama(promptFinal, opcoes) {
+  const config   = Object.assign({}, OLLAMA_CONFIG.DEFAULTS, opcoes);
+  const endpoint = getOllamaEndpoint();
+  const modelo   = getOllamaModel();
+  const url      = endpoint.replace(/\/$/, '') + OLLAMA_CONFIG.PATH;
+
+  const SEPARADOR = '\n\n---\n\n';
+  let messages;
+  const idx = promptFinal.indexOf(SEPARADOR);
+  if (idx !== -1) {
+    messages = [
+      { role: 'system', content: promptFinal.substring(0, idx) },
+      { role: 'user',   content: promptFinal.substring(idx + SEPARADOR.length) }
+    ];
+  } else {
+    messages = [{ role: 'user', content: promptFinal }];
+  }
+
+  const payload = {
+    model:       modelo,
+    messages:    messages,
+    temperature: config.temperature,
+    max_tokens:  config.maxOutputTokens,
+    stream:      false  // Apps Script não suporta streaming
+  };
+
+  const opcoesFetch = {
+    method:      'POST',
+    contentType: 'application/json',
+    payload:     JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  let ultimoErro;
+  for (let tentativa = 0; tentativa <= OLLAMA_CONFIG.MAX_RETRIES; tentativa++) {
+    if (tentativa > 0) {
+      const delay = OLLAMA_CONFIG.RETRY_DELAY * Math.pow(2, tentativa - 1);
+      registrarLog('ALERTA', `Ollama — tentativa ${tentativa + 1} — aguardando ${delay}ms`);
+      Utilities.sleep(delay);
+    }
+
+    try {
+      const response = UrlFetchApp.fetch(url, opcoesFetch);
+      const status = response.getResponseCode();
+
+      if (status === 200) {
+        const json = JSON.parse(response.getContentText());
+        const texto = _extrairTextoOpenAI(json, 'Ollama');
+        registrarLog('INFO', `Ollama (${modelo}) bem-sucedido`, `${texto.length} caracteres gerados`);
+        return texto;
+      }
+
+      const corpo = response.getContentText();
+      const erro  = _tratarErroOpenAI(status, corpo, 'Ollama');
+      if (status === 500 || status === 503) { ultimoErro = erro; continue; }
+      throw new Error(erro);
+
+    } catch (e) {
+      if (e.message.startsWith('Ollama')) throw e;
+      ultimoErro = e.message;
+      registrarLog('ERRO', `Falha Ollama (tentativa ${tentativa + 1}): ${e.message}`);
+    }
+  }
+
+  throw new Error(`Ollama — Falha após ${OLLAMA_CONFIG.MAX_RETRIES + 1} tentativas: ${ultimoErro}`);
 }
 
 /**
- * Realiza chamada ao Gemini esperando resposta em JSON.
+ * Realiza chamada ao provider de IA esperando resposta em JSON.
  * Valida e parseia o JSON retornado.
  *
  * @param {string} prompt - Texto do prompt
@@ -181,7 +403,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA: Retorne APENAS um objeto JSON válido, sem tex
   try {
     return JSON.parse(textoLimpo);
   } catch (e) {
-    registrarLog('ERRO', 'Resposta do Gemini não é JSON válido', textoLimpo.substring(0, 200));
+    registrarLog('ERRO', 'Resposta da IA não é JSON válido', textoLimpo.substring(0, 200));
     throw new Error(
       'O modelo retornou uma resposta em formato inválido. ' +
       'Tente novamente ou simplifique o prompt.'
@@ -194,8 +416,8 @@ FORMATO OBRIGATÓRIO DE RESPOSTA: Retorne APENAS um objeto JSON válido, sem tex
 // ============================================================
 
 /**
- * Extrai o texto da resposta da API Gemini.
- * @param {Object} json - Resposta parseada da API
+ * Extrai o texto de resposta no formato Gemini (candidates[]).
+ * @param {Object} json - Resposta parseada da API Gemini
  * @returns {string} Texto gerado
  */
 function _extrairTextoResposta(json) {
@@ -234,12 +456,54 @@ function _tratarErroGemini(status, corpo) {
     401: 'Chave da API Gemini inválida ou expirada. Verifique as configurações do sistema.',
     403: 'Acesso não autorizado à API Gemini. Verifique as permissões do projeto Google Cloud.',
     404: 'Modelo Gemini não encontrado. O sistema pode precisar de atualização.',
-    429: 'Limite de requisições atingido. Aguarde alguns segundos e tente novamente.',
+    429: 'Limite de requisições da API Gemini atingido. Aguarde 1-2 minutos e tente novamente. Se persistir, o limite diário foi atingido — verifique o Google AI Studio.',
     500: 'Erro interno do servidor Gemini. Tente novamente em alguns instantes.',
     503: 'Serviço Gemini temporariamente indisponível. Aguarde e tente novamente.'
   };
 
   const msg = mensagens[status] || `Erro desconhecido da API Gemini (código ${status})`;
+  registrarLog('ERRO', msg, corpo ? corpo.substring(0, 300) : '');
+  return msg;
+}
+
+/**
+ * Extrai o texto de resposta no formato OpenAI (choices[0].message.content).
+ * Usado por OpenRouter e Ollama.
+ * @param {Object} json - Resposta parseada
+ * @param {string} nomeProvider - Nome do provider para mensagens de erro
+ * @returns {string} Texto gerado
+ */
+function _extrairTextoOpenAI(json, nomeProvider) {
+  if (!json.choices || json.choices.length === 0) {
+    throw new Error(`${nomeProvider} não retornou respostas. Verifique o modelo configurado.`);
+  }
+  const content = json.choices[0].message && json.choices[0].message.content;
+  if (!content) {
+    const motivo = json.choices[0].finish_reason || 'resposta vazia';
+    throw new Error(`${nomeProvider} retornou resposta vazia (finish_reason: ${motivo}).`);
+  }
+  return content;
+}
+
+/**
+ * Converte código HTTP de erro em mensagem PT-BR para providers compatíveis OpenAI.
+ * @param {number} status - Código HTTP
+ * @param {string} corpo - Corpo da resposta
+ * @param {string} nomeProvider - Nome do provider (ex: 'OpenRouter', 'Ollama')
+ * @returns {string} Mensagem de erro em Português
+ */
+function _tratarErroOpenAI(status, corpo, nomeProvider) {
+  const mensagens = {
+    400: `${nomeProvider}: Requisição inválida. Verifique o modelo configurado e o formato do prompt.`,
+    401: `${nomeProvider}: Chave de API inválida ou expirada. Verifique em ⚙️ Configurar IA.`,
+    402: `${nomeProvider}: Créditos insuficientes. Recarregue sua conta em openrouter.ai.`,
+    403: `${nomeProvider}: Acesso negado. Verifique as permissões da chave de API.`,
+    404: `${nomeProvider}: Modelo não encontrado. Verifique o slug do modelo em ⚙️ Configurar IA.`,
+    429: `${nomeProvider}: Limite de requisições atingido. Aguarde e tente novamente.`,
+    500: `${nomeProvider}: Erro interno do servidor. Tente novamente em alguns instantes.`,
+    503: `${nomeProvider}: Serviço temporariamente indisponível. Tente novamente em breve.`
+  };
+  const msg = mensagens[status] || `${nomeProvider}: Erro desconhecido (código ${status}).`;
   registrarLog('ERRO', msg, corpo ? corpo.substring(0, 300) : '');
   return msg;
 }

@@ -155,8 +155,8 @@ function diagnosticarSistema() {
 
   // ── CHECKLIST TÉCNICO ──────────────────────────────────────
 
-  // 1. API Gemini
-  relatorio.tecnico.geminiAPI = _verificarGemini();
+  // 1. Provider de IA (CRÍTICO-05: verificar provider ativo, não sempre Gemini)
+  relatorio.tecnico.providerIA = _verificarProviderIA();
 
   // 2. Planilhas-mestre
   ['MASTER_BNCC', 'BANCO_QUESTOES', 'TURMAS_ALUNOS', 'RESULTADOS'].forEach(nome => {
@@ -208,13 +208,35 @@ function diagnosticarSistema() {
   return relatorio;
 }
 
-function _verificarGemini() {
+/**
+ * CRÍTICO-05: verifica o provider de IA *ativo*, não sempre o Gemini.
+ * Substituiu _verificarGemini() que reportava CRITICO mesmo quando o
+ * provider ativo era OpenRouter ou Ollama.
+ */
+function _verificarProviderIA() {
+  const provider = getProvedorAtivo();
   try {
-    getGeminiKey();
-    return { status: 'OK', mensagem: 'Chave configurada' };
+    if (provider === 'gemini') {
+      getGeminiKey();
+      return { status: 'OK', mensagem: 'Gemini — chave configurada' };
+    }
+    if (provider === 'openrouter') {
+      getOpenRouterKey();
+      return { status: 'OK', mensagem: `OpenRouter — chave configurada (modelo: ${getOpenRouterModel()})` };
+    }
+    if (provider === 'ollama') {
+      getOllamaEndpoint();
+      return { status: 'OK', mensagem: `Ollama — endpoint configurado (modelo: ${getOllamaModel()})` };
+    }
+    return { status: 'ATENCAO', mensagem: `Provider desconhecido: ${provider}` };
   } catch (e) {
-    return { status: 'CRITICO', mensagem: 'Chave GEMINI_KEY não configurada' };
+    return { status: 'CRITICO', mensagem: `${provider}: ${e.message}` };
   }
+}
+
+/** @deprecated use _verificarProviderIA() */
+function _verificarGemini() {
+  return _verificarProviderIA();
 }
 
 function _verificarPlanilha(nome, id) {
@@ -268,7 +290,8 @@ function _verificarTurmas() {
     const config = getConfig();
     if (!config.SHEETS.TURMAS_ALUNOS) return { status: 'CRITICO', mensagem: 'Planilha não configurada' };
     const dados = lerAba(config.SHEETS.TURMAS_ALUNOS, 'Turmas');
-    const turmasAtivas = dados.slice(1).filter(t => String(t[7]) === 'TRUE' || String(t[7]).toLowerCase() === 'true').length;
+    // BUG-01: usar estaAtivo() para normalizar comparação
+    const turmasAtivas = dados.slice(1).filter(t => estaAtivo(t[7])).length;
     if (turmasAtivas === 0) return { status: 'ATENCAO', mensagem: 'Nenhuma turma ativa cadastrada' };
     return { status: 'OK', mensagem: `${turmasAtivas} turmas ativas` };
   } catch (e) {

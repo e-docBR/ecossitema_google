@@ -449,4 +449,40 @@ select { cursor: pointer; }
 .text-center { text-align: center; }
 .text-muted { color: var(--cor-texto-sec); font-size: 12px; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* ── BNCC AUTOCOMPLETE ──────────────────────────────────── */
+.bncc-autocomplete { position: relative; }
+.bncc-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-elevada);
+  z-index: 500;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+.bncc-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--cor-fundo);
+  transition: background var(--transicao);
+}
+.bncc-item:last-child { border-bottom: none; }
+.bncc-item:hover { background: var(--cor-primaria-clara); }
+.bncc-item-codigo { font-weight: 600; color: var(--cor-primaria); font-size: 12px; }
+.bncc-item-meta   { font-size: 11px; color: var(--cor-texto-sec); margin: 1px 0; }
+.bncc-item-desc   { font-size: 11px; color: var(--cor-texto); overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.bncc-preview {
+  margin-top: 4px;
+  padding: 8px 12px;
+  background: var(--cor-primaria-clara);
+  border: 1px solid #c5d8fa;
+  border-radius: var(--raio);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.bncc-preview-codigo { font-weight: 600; color: var(--cor-primaria); }
 </style>

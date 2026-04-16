@@ -100,6 +100,7 @@
 
   <div class="footer-links">
     <a onclick="navegarPara('configuracoes')">🔧 Configurar</a>
+    <a onclick="navegarPara('configurar-ia')">⚙️ Configurar IA</a>
     <a onclick="navegarPara('sistema')">⚙️ Sistema</a>
     <a onclick="navegarPara('sobre')">ℹ️ Sobre</a>
   </div>
@@ -759,8 +760,18 @@
 
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button class="btn btn-secondary" onclick="popularBNCCCatalogo()">
-        📚 Popular Catálogo BNCC (~60 habilidades)
+        📚 Popular Catálogo BNCC (~180 habilidades)
       </button>
+
+      <div class="campo" style="margin-bottom:0;">
+        <label style="font-size:11px;color:var(--cor-texto-sec);margin-bottom:4px;display:block;">Importar planilha BNCC completa (ID do Google Sheets)</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="cfg-bncc-import-id" placeholder="Ex: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" style="flex:1;font-size:11px;">
+          <button class="btn btn-secondary btn-sm" onclick="importarBNCCPlanilha()" style="white-space:nowrap;">⬆ Importar</button>
+        </div>
+        <div class="hint">Planilha deve ter aba "Habilidades" com as colunas: Codigo_BNCC, Componente, Ano_Serie, Campo_Tematico, Descricao_Habilidade, Nivel_Bloom, Ativo</div>
+      </div>
+
       <button class="btn btn-secondary" onclick="popularTestData()">
         🧪 Inserir Turmas e Alunos de Teste
       </button>
@@ -769,6 +780,94 @@
       </button>
     </div>
     <div id="cfg-seed-resultado" class="resultado-container mt-16"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: CONFIGURAR IA (multi-provider)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-configurar-ia" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>⚙️ Configurar IA</h2>
+
+    <!-- Provider ativo (badge) -->
+    <div id="ia-provider-badge" style="margin-bottom:14px;padding:10px 14px;border-radius:var(--raio);font-size:13px;font-weight:500;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;">
+      ⏳ Carregando...
+    </div>
+
+    <!-- Selector de provider -->
+    <div class="campo">
+      <label>Provider de IA</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="ia-provider" value="gemini" onchange="atualizarCamposProvider()">
+          <span>🔵 Google Gemini</span>
+        </label>
+        <label>
+          <input type="radio" name="ia-provider" value="openrouter" onchange="atualizarCamposProvider()">
+          <span>🟣 OpenRouter <small class="text-muted">(acesso a Claude, GPT-4, Llama...)</small></span>
+        </label>
+        <label>
+          <input type="radio" name="ia-provider" value="ollama" onchange="atualizarCamposProvider()">
+          <span>🟠 Ollama <small class="text-muted">(servidor local com URL pública)</small></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Campos: Gemini -->
+    <div id="ia-campos-gemini" class="ia-campos-provider">
+      <div class="campo">
+        <label for="ia-gemini-key">🔑 Chave API Gemini</label>
+        <input type="password" id="ia-gemini-key" placeholder="AIza..." autocomplete="off">
+        <small class="text-muted">Obtida em <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></small>
+      </div>
+    </div>
+
+    <!-- Campos: OpenRouter -->
+    <div id="ia-campos-openrouter" class="ia-campos-provider" style="display:none;">
+      <div class="campo">
+        <label for="ia-or-key">🔑 Chave API OpenRouter</label>
+        <input type="password" id="ia-or-key" placeholder="sk-or-..." autocomplete="off">
+        <small class="text-muted">Obtida em <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></small>
+      </div>
+      <div class="campo">
+        <label for="ia-or-model">Modelo</label>
+        <input type="text" id="ia-or-model" placeholder="anthropic/claude-3.5-sonnet">
+        <div class="hint">Slug completo do modelo. Exemplos:<br>
+          <code>anthropic/claude-3.5-sonnet</code><br>
+          <code>openai/gpt-4o</code><br>
+          <code>meta-llama/llama-3.3-70b-instruct</code><br>
+          <code>google/gemini-2.0-flash-001</code><br>
+          Veja todos em <a href="https://openrouter.ai/models" target="_blank">openrouter.ai/models</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campos: Ollama -->
+    <div id="ia-campos-ollama" class="ia-campos-provider" style="display:none;">
+      <div style="margin-bottom:10px;padding:10px 12px;background:#fff3e0;border:1px solid #ffcc80;border-radius:var(--raio);font-size:12px;color:#e65100;">
+        ⚠️ <strong>Atenção:</strong> Apps Script roda nos servidores do Google, não localmente.
+        O Ollama precisa estar acessível via URL pública (IP fixo, domínio, ou tunnel como Cloudflare Tunnel / ngrok).
+      </div>
+      <div class="campo">
+        <label for="ia-ollama-endpoint">🌐 URL pública do servidor Ollama</label>
+        <input type="url" id="ia-ollama-endpoint" placeholder="https://meu-servidor.exemplo.com:11434">
+        <div class="hint">Inclua o protocolo (https://) e porta, sem barra final.</div>
+      </div>
+      <div class="campo">
+        <label for="ia-ollama-model">Modelo</label>
+        <input type="text" id="ia-ollama-model" placeholder="llama3.2">
+        <div class="hint">Nome do modelo instalado no seu Ollama. Ex: <code>llama3.2</code>, <code>mistral</code>, <code>phi4</code></div>
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div style="display:flex;gap:8px;margin-top:16px;margin-bottom:8px;">
+      <button class="btn btn-primary" style="flex:1" onclick="salvarConfiguracaoIA()">💾 Salvar</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="testarProviderIA()">🔍 Testar Conexão</button>
+    </div>
+    <div id="ia-cfg-resultado" class="resultado-container"></div>
   </div>
 </div>
 
@@ -784,6 +883,8 @@ document.addEventListener('DOMContentLoaded', function() {
   carregarTurmas('relatorio-turma');
   carregarTurmas('pauta-turma');
   carregarTurmas('pei-turma');
+  // Autocomplete BNCC em todos os campos de habilidade
+  ['plano-bncc', 'corrigir-bncc', 'diag-bncc', 'lote-bncc'].forEach(initBNCCAutocomplete);
 });
 
 /* ── Gerar Questões (requer seleção no Docs) ────────────── */
@@ -1116,6 +1217,112 @@ function testarGeminiConexao() {
   );
 }
 
+/* ══ CONFIGURAR IA (multi-provider) ═══════════════════════════ */
+
+/* Observador de página */
+document.addEventListener('DOMContentLoaded', function() {
+  var pgIA = document.getElementById('pg-configurar-ia');
+  if (pgIA) {
+    new MutationObserver(function(muts) {
+      muts.forEach(function(m) {
+        if (m.attributeName === 'class' && !pgIA.classList.contains('oculto')) {
+          _carregarConfiguracaoIA();
+        }
+      });
+    }).observe(pgIA, { attributes: true });
+  }
+});
+
+function _carregarConfiguracaoIA() {
+  chamarServidor('getConfiguracaoIAHTML', [], function(cfg) {
+    if (!cfg || cfg.erro) return;
+
+    // Selecionar radio do provider ativo
+    var radios = document.querySelectorAll('input[name="ia-provider"]');
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].checked = (radios[i].value === cfg.provedorAtivo);
+    }
+    atualizarCamposProvider();
+
+    // Preencher modelo OpenRouter se configurado
+    if (cfg.openRouterModel) {
+      document.getElementById('ia-or-model').value = cfg.openRouterModel;
+    }
+    // Preencher endpoint e modelo Ollama se configurados
+    if (cfg.ollamaEndpoint) {
+      document.getElementById('ia-ollama-endpoint').value = cfg.ollamaEndpoint;
+    }
+    if (cfg.ollamaModel) {
+      document.getElementById('ia-ollama-model').value = cfg.ollamaModel;
+    }
+
+    // Atualizar badge
+    var badge = document.getElementById('ia-provider-badge');
+    var nomes = { gemini: '🔵 Google Gemini', openrouter: '🟣 OpenRouter', ollama: '🟠 Ollama' };
+    var nome  = nomes[cfg.provedorAtivo] || cfg.provedorAtivo;
+    var chaveOk = cfg.provedorAtivo === 'gemini' ? cfg.geminiKeyOk
+                : cfg.provedorAtivo === 'openrouter' ? cfg.openRouterKeyOk
+                : cfg.ollamaEndpointOk;
+    badge.style.background = chaveOk ? '#e8f5e9' : '#fff3e0';
+    badge.style.color       = chaveOk ? '#2e7d32' : '#e65100';
+    badge.style.borderColor = chaveOk ? '#a5d6a7' : '#ffcc80';
+    badge.textContent = 'Provider ativo: ' + nome + (chaveOk ? ' ✅' : ' ⚠️ chave/endpoint pendente');
+  });
+}
+
+function atualizarCamposProvider() {
+  var selecionado = obterRadioSelecionado('ia-provider') || 'gemini';
+  var todos = document.querySelectorAll('.ia-campos-provider');
+  for (var i = 0; i < todos.length; i++) { todos[i].style.display = 'none'; }
+  var alvo = document.getElementById('ia-campos-' + selecionado);
+  if (alvo) alvo.style.display = 'block';
+}
+
+function salvarConfiguracaoIA() {
+  var provider = obterRadioSelecionado('ia-provider');
+  if (!provider) { mostrarToast('Selecione um provider.', 'erro'); return; }
+
+  var dados = { provedorAtivo: provider };
+
+  if (provider === 'gemini') {
+    var key = document.getElementById('ia-gemini-key').value.trim();
+    if (key) dados.geminiKey = key;
+  } else if (provider === 'openrouter') {
+    var orKey = document.getElementById('ia-or-key').value.trim();
+    var orModel = document.getElementById('ia-or-model').value.trim();
+    if (orKey) dados.openRouterKey = orKey;
+    if (orModel) dados.openRouterModel = orModel;
+  } else if (provider === 'ollama') {
+    var epVal = document.getElementById('ia-ollama-endpoint').value.trim();
+    var mdVal = document.getElementById('ia-ollama-model').value.trim();
+    if (epVal) dados.ollamaEndpoint = epVal;
+    if (mdVal) dados.ollamaModel = mdVal;
+  }
+
+  var box = document.getElementById('ia-cfg-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Salvando...</div>';
+
+  chamarServidor('salvarConfiguracaoIAHTML', [dados], function(res) {
+    box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+    if (res.sucesso) {
+      // Limpar campos de senha por segurança
+      document.getElementById('ia-gemini-key').value  = '';
+      document.getElementById('ia-or-key').value      = '';
+      setTimeout(_carregarConfiguracaoIA, 500);
+    }
+  }, '💾 Salvando configuração...');
+}
+
+function testarProviderIA() {
+  var box = document.getElementById('ia-cfg-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Testando conexão...</div>';
+  chamarServidor('testarProviderIAHTML', [], function(res) {
+    box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+      (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+  }, '🔍 Testando provider de IA...');
+}
+
 function popularBNCCCatalogo() {
   var box = document.getElementById('cfg-seed-resultado');
   box.innerHTML = '<div class="resultado">⏳ Populando catálogo BNCC...</div>';
@@ -1125,6 +1332,24 @@ function popularBNCCCatalogo() {
         (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
       if (res.sucesso) setTimeout(_carregarStatusConfig, 600);
     }
+  );
+}
+
+function importarBNCCPlanilha() {
+  var id = document.getElementById('cfg-bncc-import-id').value.trim();
+  if (!id) { mostrarToast('Informe o ID da planilha de origem.', 'erro'); return; }
+  // Extrair ID se colaram a URL completa
+  var match = id.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) id = match[1];
+  var box = document.getElementById('cfg-seed-resultado');
+  box.innerHTML = '<div class="resultado">⏳ Importando BNCC da planilha...</div>';
+  chamarServidor('importarBNCCDePlanilhaHTML', [id],
+    function(res) {
+      box.innerHTML = '<div class="resultado ' + (res.sucesso ? '' : 'erro') + '">' +
+        (res.sucesso ? '✅ ' : '❌ ') + escapeHtml(res.mensagem) + '</div>';
+      if (res.sucesso) setTimeout(_carregarStatusConfig, 800);
+    },
+    '📥 Importando habilidades BNCC...'
   );
 }
 

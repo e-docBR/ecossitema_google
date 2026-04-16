@@ -5,13 +5,14 @@
  *
  * Gerencia a estrutura de pastas e arquivos no Google Drive.
  * Todas as operações de criação/leitura de arquivos passam por aqui.
- * Nunca use DriveApp diretamente em outros módulos — use as funções deste serviço.
+ * NUNCA use DriveApp diretamente em outros módulos — use as funções deste serviço.
  *
- * Referência: Bloco 1.3 do prompt mestre (estrutura de pastas)
+ * Sprint 1 — BUG-04: Substituído addFile/removeFile por moveTo (Drive API v3)
+ * Sprint 3 — Nova estrutura: 06_PROFESSORES/{slug_professor}/
  */
 
 // ============================================================
-// ESTRUTURA DE PASTAS (Bloco 1.3)
+// ESTRUTURA DE PASTAS
 // ============================================================
 
 const ESTRUTURA_PASTAS = Object.freeze({
@@ -21,9 +22,8 @@ const ESTRUTURA_PASTAS = Object.freeze({
       '01_PLANEJAMENTO': {
         nome: '01_PLANEJAMENTO',
         subpastas: {
-          'Planos_de_Aula':        { nome: 'Planos_de_Aula',        subpastas: {} },
-          'Sequencias_Didaticas':  { nome: 'Sequencias_Didaticas',  subpastas: {} },
-          'Templates':             { nome: 'Templates',             subpastas: {} }
+          'Sequencias_Didaticas': { nome: 'Sequencias_Didaticas', subpastas: {} },
+          'Templates':            { nome: 'Templates',            subpastas: {} }
         }
       },
       '02_AVALIACAO': {
@@ -32,8 +32,8 @@ const ESTRUTURA_PASTAS = Object.freeze({
           'Banco_de_Questoes': {
             nome: 'Banco_de_Questoes',
             subpastas: {
-              'Objetivas':    { nome: 'Objetivas',    subpastas: {} },
-              'Discursivas':  { nome: 'Discursivas',  subpastas: {} }
+              'Objetivas':   { nome: 'Objetivas',   subpastas: {} },
+              'Discursivas': { nome: 'Discursivas', subpastas: {} }
             }
           },
           'Provas_Geradas': { nome: 'Provas_Geradas', subpastas: {} },
@@ -43,9 +43,8 @@ const ESTRUTURA_PASTAS = Object.freeze({
       '03_RESULTADOS': {
         nome: '03_RESULTADOS',
         subpastas: {
-          'Respostas_Forms':      { nome: 'Respostas_Forms',      subpastas: {} },
-          'Notas_e_Frequencia':   { nome: 'Notas_e_Frequencia',   subpastas: {} },
-          'Relatorios_Analiticos':{ nome: 'Relatorios_Analiticos',subpastas: {} }
+          'Notas_e_Frequencia':    { nome: 'Notas_e_Frequencia',    subpastas: {} },
+          'Relatorios_Analiticos': { nome: 'Relatorios_Analiticos', subpastas: {} }
         }
       },
       '04_ALUNOS': {
@@ -55,9 +54,18 @@ const ESTRUTURA_PASTAS = Object.freeze({
           'PEI_PDI':            { nome: 'PEI_PDI',            subpastas: {} }
         }
       },
-      '05_CONFIGURACOES': {
-        nome: '05_CONFIGURACOES',
-        subpastas: {}
+      '05_CONFIGURACOES': { nome: '05_CONFIGURACOES', subpastas: {} },
+      '06_PROFESSORES': {  // Sprint 3 — Pastas individuais dos professores
+        nome: '06_PROFESSORES',
+        subpastas: {
+          '_COMPARTILHADOS': {
+            nome: '_COMPARTILHADOS',
+            subpastas: {
+              'Templates_Aprovados': { nome: 'Templates_Aprovados', subpastas: {} },
+              'Boas_Praticas':       { nome: 'Boas_Praticas',       subpastas: {} }
+            }
+          }
+        }
       }
     }
   }
@@ -71,22 +79,20 @@ const ESTRUTURA_PASTAS = Object.freeze({
  * Busca ou cria uma pasta pelo nome dentro de um diretório pai.
  * Idempotente: não cria duplicatas.
  *
- * @param {string} nome - Nome da pasta
- * @param {Folder} pastaParent - Pasta pai onde criar
- * @returns {Folder} A pasta encontrada ou criada
+ * @param {string} nome
+ * @param {GoogleAppsScript.Drive.Folder} pastaParent
+ * @returns {GoogleAppsScript.Drive.Folder}
  */
 function buscarOuCriarPasta(nome, pastaParent) {
   const existentes = pastaParent.getFoldersByName(nome);
-  if (existentes.hasNext()) {
-    return existentes.next();
-  }
+  if (existentes.hasNext()) return existentes.next();
   const nova = pastaParent.createFolder(nome);
   registrarLog('INFO', `Pasta criada: ${nome}`, `Pai: ${pastaParent.getName()}`);
   return nova;
 }
 
 /**
- * Cria recursivamente a estrutura de pastas do PEDAGOGO.AI no Drive raiz do usuário.
+ * Cria recursivamente a estrutura de pastas do PEDAGOGO.AI.
  * Salva os IDs das pastas principais no PropertiesService.
  *
  * @returns {Object} Mapa nome → ID das pastas criadas
@@ -95,18 +101,17 @@ function criarEstruturaPastas() {
   const raiz = DriveApp.getRootFolder();
   const idsGerados = {};
 
-  // Criar pasta raiz PEDAGOGO.AI
   const pastaRoot = buscarOuCriarPasta(ESTRUTURA_PASTAS.ROOT.nome, raiz);
   idsGerados.ROOT = pastaRoot.getId();
   salvarPropriedade('ID_PASTA_ROOT', pastaRoot.getId());
 
-  // Criar subpastas de primeiro nível e guardar IDs
   const mapaChaves = {
     '01_PLANEJAMENTO':  'ID_PASTA_PLANEJAMENTO',
     '02_AVALIACAO':     'ID_PASTA_AVALIACAO',
     '03_RESULTADOS':    'ID_PASTA_RESULTADOS',
     '04_ALUNOS':        'ID_PASTA_ALUNOS',
-    '05_CONFIGURACOES': 'ID_PASTA_CONFIGURACOES'
+    '05_CONFIGURACOES': 'ID_PASTA_CONFIGURACOES',
+    '06_PROFESSORES':   'ID_PASTA_PROFESSORES'    // Sprint 3
   };
 
   Object.entries(ESTRUTURA_PASTAS.ROOT.subpastas).forEach(([chave, def]) => {
@@ -117,12 +122,15 @@ function criarEstruturaPastas() {
       idsGerados[chave] = pasta.getId();
     }
 
-    // Criar subpastas de segundo nível
     Object.values(def.subpastas || {}).forEach(subdef => {
       const subpasta = buscarOuCriarPasta(subdef.nome, pasta);
       idsGerados[subdef.nome] = subpasta.getId();
 
-      // Criar subpastas de terceiro nível (ex: Objetivas, Discursivas)
+      // Sprint 3: salvar ID da pasta _COMPARTILHADOS
+      if (subdef.nome === '_COMPARTILHADOS') {
+        salvarPropriedade('ID_PASTA_COMPARTILHADOS', subpasta.getId());
+      }
+
       Object.values(subdef.subpastas || {}).forEach(subsubdef => {
         const subsubpasta = buscarOuCriarPasta(subsubdef.nome, subpasta);
         idsGerados[subsubdef.nome] = subsubpasta.getId();
@@ -130,80 +138,87 @@ function criarEstruturaPastas() {
     });
   });
 
-  registrarLog('INFO', 'Estrutura de pastas criada com sucesso', `${Object.keys(idsGerados).length} pastas`);
+  registrarLog('INFO', 'Estrutura de pastas criada', `${Object.keys(idsGerados).length} pastas`);
   return idsGerados;
 }
 
 // ============================================================
-// OPERAÇÕES COM ARQUIVOS
+// OPERAÇÕES COM ARQUIVOS (Sprint 1 — BUG-04: usar moveTo)
 // ============================================================
 
 /**
- * Cria um Google Doc com o texto fornecido e o salva na pasta correta.
+ * Move um arquivo para uma pasta destino usando a API moderna (Drive v3).
+ * Substitui o padrão addFile/removeFile que era frágil.
  *
- * @param {string} titulo - Título do documento
- * @param {string} conteudo - Conteúdo em Markdown ou texto simples
- * @param {string} pastaNome - Nome da subpasta destino dentro de 01_PLANEJAMENTO/Planos_de_Aula
+ * @param {GoogleAppsScript.Drive.File} arquivo
+ * @param {GoogleAppsScript.Drive.Folder} pastaDestino
+ */
+function moverArquivoParaPasta(arquivo, pastaDestino) {
+  arquivo.moveTo(pastaDestino);
+}
+
+/**
+ * Cria um Google Doc com conteúdo e o move para a pasta do professor.
+ * Sprint 3: arquivos vão para a pasta pessoal do professor, não para a genérica.
+ *
+ * @param {string} titulo    - Título do documento
+ * @param {string} conteudo  - Conteúdo em texto simples / Markdown
+ * @param {string} [nomePasta] - Subpasta dentro da pasta do professor
  * @returns {string} URL do documento criado
  */
-function salvarDocumentoPlano(titulo, conteudo, pastaNome) {
+function salvarDocumentoPlano(titulo, conteudo, nomePasta) {
   const config = getConfig();
-  const pastaPlanos = obterPastaPlanoDeAula(pastaNome);
 
   const doc = DocumentApp.create(titulo);
   const body = doc.getBody();
   body.clear();
 
-  // Adicionar cabeçalho institucional
+  // Cabeçalho institucional
   const cabecalho = body.appendParagraph(config.ESCOLA);
   cabecalho.setHeading(DocumentApp.ParagraphHeading.HEADING2);
-
   body.appendParagraph(config.SECRETARIA).setItalic(true);
   body.appendHorizontalRule();
-
-  // Conteúdo gerado pelo Gemini
   body.appendParagraph(conteudo);
-
   doc.saveAndClose();
 
-  // Mover para a pasta correta
+  // Sprint 3: mover para pasta do professor
   const arquivo = DriveApp.getFileById(doc.getId());
-  pastaPlanos.addFile(arquivo);
-  DriveApp.getRootFolder().removeFile(arquivo);
+  const pastaDestino = obterSubpastaProfessor('Planos_de_Aula', nomePasta);
+  arquivo.moveTo(pastaDestino);
 
-  registrarLog('INFO', `Plano de aula salvo: ${titulo}`, `URL: ${doc.getUrl()}`);
+  registrarLog('INFO', `Plano salvo: ${titulo}`, doc.getUrl());
   return doc.getUrl();
 }
 
 /**
  * Obtém (ou cria) a subpasta de planos para uma turma/disciplina/ano específicos.
- * Formato: Planos_de_Aula/[ANO]_[TURMA]_[DISCIPLINA]/
+ * Sprint 3: agora usa a pasta do professor em vez da pasta genérica.
  *
  * @param {string} nomePasta - Ex: '2026_6A_PortuguesEF2'
- * @returns {Folder} Pasta destino
+ * @returns {GoogleAppsScript.Drive.Folder}
  */
 function obterPastaPlanoDeAula(nomePasta) {
-  const config = getConfig();
-  const idPlanejamento = config.DRIVE.PLANEJAMENTO;
-  if (!idPlanejamento) throw new Error('Pasta 01_PLANEJAMENTO não configurada. Execute o SetupInicial.');
-
-  const pastaPlanejamento = DriveApp.getFolderById(idPlanejamento);
-  const planosExistentes = pastaPlanejamento.getFoldersByName('Planos_de_Aula');
-  const pastaPlanos = planosExistentes.hasNext()
-    ? planosExistentes.next()
-    : pastaPlanejamento.createFolder('Planos_de_Aula');
-
-  return buscarOuCriarPasta(nomePasta || 'Geral', pastaPlanos);
+  // Delegar para PastaProfessor se disponível (Sprint 3)
+  try {
+    return obterSubpastaProfessor('Planos_de_Aula', nomePasta);
+  } catch (_) {
+    // Fallback para pasta genérica se PastaProfessor não disponível
+    const config = getConfig();
+    const idPlanejamento = config.DRIVE.PLANEJAMENTO;
+    if (!idPlanejamento) throw new Error('Pasta 01_PLANEJAMENTO não configurada. Execute o SetupInicial.');
+    const pastaPlanejamento = DriveApp.getFolderById(idPlanejamento);
+    const pastaPlanos = buscarOuCriarPasta('Planos_de_Aula', pastaPlanejamento);
+    return buscarOuCriarPasta(nomePasta || 'Geral', pastaPlanos);
+  }
 }
 
 /**
  * Salva um documento de prova na pasta correta.
- * Formato: 02_AVALIACAO/Provas_Geradas/[ANO]_[BIMESTRE]/
  *
- * @param {string} docId - ID do Google Doc da prova
- * @param {string} turma - Identificador da turma
+ * @param {string} docId
+ * @param {string} turma
  * @param {string} bimestre - Ex: '1B_2026'
- * @returns {string} URL do arquivo movido
+ * @returns {string} URL do arquivo
  */
 function salvarProva(docId, turma, bimestre) {
   const config = getConfig();
@@ -211,27 +226,21 @@ function salvarProva(docId, turma, bimestre) {
   if (!idAvaliacao) throw new Error('Pasta 02_AVALIACAO não configurada.');
 
   const pastaAvaliacao = DriveApp.getFolderById(idAvaliacao);
-  const provasExistentes = pastaAvaliacao.getFoldersByName('Provas_Geradas');
-  const pastaProvas = provasExistentes.hasNext()
-    ? provasExistentes.next()
-    : pastaAvaliacao.createFolder('Provas_Geradas');
-
-  const nomePasta = `${bimestre}_${turma}`;
-  const pastaDestino = buscarOuCriarPasta(nomePasta, pastaProvas);
+  const pastaProvas = buscarOuCriarPasta('Provas_Geradas', pastaAvaliacao);
+  const pastaDestino = buscarOuCriarPasta(`${bimestre}_${turma}`, pastaProvas);
 
   const arquivo = DriveApp.getFileById(docId);
-  pastaDestino.addFile(arquivo);
-  DriveApp.getRootFolder().removeFile(arquivo);
+  arquivo.moveTo(pastaDestino);   // BUG-04 corrigido
 
-  registrarLog('INFO', `Prova salva: ${arquivo.getName()}`, `Pasta: ${nomePasta}`);
+  registrarLog('INFO', `Prova salva: ${arquivo.getName()}`, `Pasta: ${bimestre}_${turma}`);
   return arquivo.getUrl();
 }
 
 /**
- * Salva gabarito na pasta protegida de gabaritos.
+ * Salva gabarito na pasta protegida.
  * Gabaritos são compartilhados APENAS após a aplicação da prova.
  *
- * @param {string} docId - ID do Google Doc do gabarito
+ * @param {string} docId
  * @returns {string} URL do gabarito
  */
 function salvarGabarito(docId) {
@@ -240,16 +249,12 @@ function salvarGabarito(docId) {
   if (!idAvaliacao) throw new Error('Pasta 02_AVALIACAO não configurada.');
 
   const pastaAvaliacao = DriveApp.getFolderById(idAvaliacao);
-  const gabaritosExistentes = pastaAvaliacao.getFoldersByName('Gabaritos');
-  const pastaGabaritos = gabaritosExistentes.hasNext()
-    ? gabaritosExistentes.next()
-    : pastaAvaliacao.createFolder('Gabaritos');
+  const pastaGabaritos = buscarOuCriarPasta('Gabaritos', pastaAvaliacao);
 
   const arquivo = DriveApp.getFileById(docId);
-  pastaGabaritos.addFile(arquivo);
-  DriveApp.getRootFolder().removeFile(arquivo);
+  arquivo.moveTo(pastaGabaritos);  // BUG-04 corrigido
 
-  // Revogar acesso público ao gabarito (apenas o owner pode ver)
+  // Acesso privado ao gabarito
   arquivo.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
 
   registrarLog('INFO', `Gabarito salvo e protegido: ${arquivo.getName()}`);
@@ -259,10 +264,10 @@ function salvarGabarito(docId) {
 /**
  * Salva relatório analítico na pasta de resultados.
  *
- * @param {string} docId - ID do Google Doc do relatório
- * @param {string} turma - Identificador da turma
- * @param {boolean} ehPublico - Se true, usa versão anonimizada
- * @returns {string} URL do relatório
+ * @param {string} docId
+ * @param {string} turma
+ * @param {boolean} ehPublico
+ * @returns {string} URL
  */
 function salvarRelatorio(docId, turma, ehPublico) {
   const config = getConfig();
@@ -270,18 +275,44 @@ function salvarRelatorio(docId, turma, ehPublico) {
   if (!idResultados) throw new Error('Pasta 03_RESULTADOS não configurada.');
 
   const pastaResultados = DriveApp.getFolderById(idResultados);
-  const relExistentes = pastaResultados.getFoldersByName('Relatorios_Analiticos');
-  const pastaRel = relExistentes.hasNext()
-    ? relExistentes.next()
-    : pastaResultados.createFolder('Relatorios_Analiticos');
-
+  const pastaRel = buscarOuCriarPasta('Relatorios_Analiticos', pastaResultados);
   const nomePasta = `${turma}_${formatarData(new Date(), 'yyyy')}`;
   const pastaDestino = buscarOuCriarPasta(nomePasta, pastaRel);
 
   const arquivo = DriveApp.getFileById(docId);
-  pastaDestino.addFile(arquivo);
-  DriveApp.getRootFolder().removeFile(arquivo);
+  arquivo.moveTo(pastaDestino);  // BUG-04 corrigido
 
+  return arquivo.getUrl();
+}
+
+/**
+ * Salva documento de PEI/PDI na pasta protegida de alunos.
+ * Acesso restrito: apenas coordenação e professor do aluno.
+ *
+ * @param {string} docId
+ * @param {string[]} emailsAutorizados - E-mails com acesso
+ * @returns {string} URL
+ */
+function salvarPEI(docId, emailsAutorizados) {
+  const config = getConfig();
+  const idAlunos = config.DRIVE.ALUNOS;
+  if (!idAlunos) throw new Error('Pasta 04_ALUNOS não configurada.');
+
+  const pastaAlunos = DriveApp.getFolderById(idAlunos);
+  const pastaPEI = buscarOuCriarPasta('PEI_PDI', pastaAlunos);
+
+  const arquivo = DriveApp.getFileById(docId);
+  arquivo.moveTo(pastaPEI);  // BUG-04 corrigido
+
+  // Restrição de acesso LGPD
+  arquivo.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+  if (emailsAutorizados && emailsAutorizados.length > 0) {
+    emailsAutorizados.filter(e => e && e.includes('@')).forEach(email => {
+      try { arquivo.addEditor(email); } catch (_) {}
+    });
+  }
+
+  registrarLog('INFO', `PEI/PDI salvo com acesso restrito: ${arquivo.getName()}`);
   return arquivo.getUrl();
 }
 
@@ -291,7 +322,7 @@ function salvarRelatorio(docId, turma, ehPublico) {
 
 /**
  * Cria backup das 4 planilhas-mestre em pasta com timestamp.
- * Executado semanalmente pelo trigger de Seguranca.
+ * Executado semanalmente pelo trigger.
  */
 function criarBackupSemanal() {
   const config = getConfig();
@@ -310,8 +341,7 @@ function criarBackupSemanal() {
   Object.entries(sheets).forEach(([nome, id]) => {
     if (!id) return;
     try {
-      const arquivo = DriveApp.getFileById(id);
-      arquivo.makeCopy(`${nome}_BACKUP`, pastaBackup);
+      DriveApp.getFileById(id).makeCopy(`${nome}_BACKUP`, pastaBackup);
       copiados++;
     } catch (e) {
       registrarLog('ERRO', `Falha no backup de ${nome}: ${e.message}`);
@@ -319,5 +349,5 @@ function criarBackupSemanal() {
   });
 
   salvarPropriedade('ULTIMO_BACKUP', formatarData(new Date(), 'dd/MM/yyyy HH:mm:ss'));
-  registrarLog('INFO', `Backup semanal concluído: ${copiados} planilhas`, `Pasta: ${nomePastaBackup}`);
+  registrarLog('INFO', `Backup semanal: ${copiados} planilhas`, `Pasta: ${nomePastaBackup}`);
 }

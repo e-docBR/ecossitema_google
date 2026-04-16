@@ -269,10 +269,11 @@ function criarFormPlanoDeAula() {
   const campoHabilidade = form.addTextItem();
   campoHabilidade.setTitle('Código(s) Habilidade BNCC');
   campoHabilidade.setHelpText('Informe o código da habilidade BNCC. Formato: EF06LP05');
+  // BUG-08: anchors adicionados — sem ^...$ o padrão aceitava qualquer string que contenha EFxxXXxx
   campoHabilidade.setValidation(
     FormApp.createTextValidation()
-      .requireTextMatchesPattern('EF\\d{2}[A-Z]{2}\\d{2}')
-      .setHelpText('Formato inválido. Use: EF + 2 dígitos + 2 letras + 2 dígitos (ex: EF06LP05)')
+      .requireTextMatchesPattern('^(EF|EI|EM)\\d{2}[A-Z]{2,3}\\d{2,3}$')
+      .setHelpText('Formato inválido. Use: EF06LP05, EI04EF01, EM13CO01, etc.')
       .build()
   );
   campoHabilidade.setRequired(true);
@@ -332,8 +333,9 @@ function _obterTurmasAtivas() {
     const config = getConfig();
     if (!config.SHEETS.TURMAS_ALUNOS) return [];
     const dados = lerAba(config.SHEETS.TURMAS_ALUNOS, 'Turmas');
+    // BUG-01: usar estaAtivo() em vez de comparação ad-hoc
     return dados.slice(1)
-      .filter(t => String(t[7]).toLowerCase() === 'true')
+      .filter(t => estaAtivo(t[7]))
       .map(t => String(t[1] || t[0]).trim())
       .filter(t => t.length > 0);
   } catch (e) {

@@ -71,7 +71,7 @@ function onOpen() {
  * Entry point do Web App.
  * URL de acesso: https://script.google.com/macros/s/{scriptId}/exec
  */
-function doGet(e) {
+function doGet(_e) {
   try {
     const template = HtmlService.createTemplateFromFile('WebApp');
     template.usuario = Session.getActiveUser().getEmail() || 'Convidado';
@@ -92,10 +92,16 @@ function doGet(e) {
  */
 function obterDashboardHTML() {
   const s = obterStatusConfiguracaoHTML();
+  const provider = getProvedorAtivo();
+  const props = PropertiesService.getScriptProperties();
+  const iaOk = provider === 'gemini'      ? !!props.getProperty('GEMINI_KEY')
+             : provider === 'openrouter'  ? !!props.getProperty('OPENROUTER_KEY')
+             : provider === 'ollama'      ? !!props.getProperty('OLLAMA_ENDPOINT')
+             : false;
   return {
     turmasAtivas: s.turmasCount   || 0,
     bnccCount:    s.bnccCount     || 0,
-    geminiOk:     s.geminiKey,
+    geminiOk:     iaOk,
     pastasOk:     s.pastasConfiguradas,
     planilhasOk:  !!(s.planilhaTurmas && s.planilhaBNCC),
     emailOk:      s.emailCoordenacao
@@ -461,15 +467,13 @@ O comunicado deve:
     body.appendParagraph(comunicado);
     doc.saveAndClose();
 
-    // Mover para pasta de planejamento
+    // Mover para pasta de planejamento (BUG-04: usar moveTo)
     try {
       const idPlanejamento = config.DRIVE.PLANEJAMENTO;
       if (idPlanejamento) {
         const pastaPlan = DriveApp.getFolderById(idPlanejamento);
         const pastaTemplates = buscarOuCriarPasta('Templates', pastaPlan);
-        const arquivo = DriveApp.getFileById(doc.getId());
-        pastaTemplates.addFile(arquivo);
-        DriveApp.getRootFolder().removeFile(arquivo);
+        DriveApp.getFileById(doc.getId()).moveTo(pastaTemplates);
       }
     } catch (e) {}
 
@@ -593,18 +597,19 @@ function abrirPastaPedagogo() {
   const config = getConfig();
   const id = config.DRIVE.ROOT;
   if (!id) { _mostrarErro('Pasta PEDAGOGO.AI não configurada. Execute o Setup.'); return; }
-  const pasta = DriveApp.getFolderById(id);
+  DriveApp.getFolderById(id);  // valida acesso à pasta antes de exibir a URL
   const url = `https://drive.google.com/drive/folders/${id}`;
   _obterUI().alert('Pasta PEDAGOGO.AI', `URL da pasta:\n${url}`, _obterUI().ButtonSet.OK);
 }
 
 function mostrarSobre() {
   _obterUI().alert(
-    'PEDAGOGO.AI — v1.0',
+    'PEDAGOGO.AI — v2.0',
     'Sistema de Automação Pedagógica\nColégio Municipal de Itabatan | SEME/Mucuri-BA\n\n' +
     'Desenvolvido com Google Workspace for Education + Gemini AI\n\n' +
     'Módulos: Planos de Aula | Banco de Questões | Correção Automática\n' +
-    'Frequência | Relatórios | Dashboard | LGPD Compliance',
+    'Frequência | Relatórios | Dashboard | Pastas por Professor | LGPD Compliance\n\n' +
+    'v2.0 — Sprint 3 (Pastas Professor) | Sprint 4 (BNCC EI/EM/EJA)',
     _obterUI().ButtonSet.OK
   );
 }
@@ -831,9 +836,12 @@ function executarEtapaSetup(etapa) {
     }
     case 6: {
       const urlForm = criarFormPlanoDeAula();
+      try { criarPastasParaTodosProfessores(); } catch(e) {
+        registrarLog('ALERTA', 'Pastas de professores: ' + e.message);
+      }
       salvarPropriedade('DATA_INSTALACAO', formatarData(new Date(), 'dd/MM/yyyy HH:mm:ss'));
-      salvarPropriedade('VERSAO_SISTEMA', '1.0');
-      registrarLog('INFO', 'Setup concluído via wizard HTML');
+      salvarPropriedade('VERSAO_SISTEMA', '2.0');
+      registrarLog('INFO', 'Setup v2.0 concluído via wizard HTML');
       return { ok: true, urlFormPlano: urlForm };
     }
     default:
@@ -854,9 +862,14 @@ function listarTurmasAtivasHTML() {
     const config = getConfig();
     if (!config.SHEETS.TURMAS_ALUNOS) return [];
     const dados = lerAba(config.SHEETS.TURMAS_ALUNOS, ABAS.TURMAS_ALUNOS.TURMAS);
+    // BUG-01: usar estaAtivo() para normalizar TRUE/true/1/Sim/Ativo
     return dados.slice(1)
-      .filter(t => String(t[7]) === 'TRUE' || String(t[7]).toLowerCase() === 'true')
-      .map(t => String(t[0]));
+      .filter(t => estaAtivo(t[7]))
+      .map(t => ({
+        valor: String(t[0]).trim(),                         // Codigo_Turma ('7A') — usado em lookups
+        texto: String(t[1] || t[0]).trim()                 // Nome_Turma ('7º Ano A') — exibido no select
+      }))
+      .filter(t => t.valor);
   } catch (e) {
     return [];
   }
@@ -913,14 +926,22 @@ Adapte o nível de complexidade para o Ensino Fundamental.`;
 
 /** Gerar plano de aula — versão HTML */
 function gerarPlanoDeAulaHTML(dados) {
-  dados.codigoHabilidade = dados.codigoHabilidade.toUpperCase();
-  // Converter número de aulas (1–10) para minutos (50min cada)
-  dados.duracao = (parseInt(dados.duracao) || 1) * 50;
-  if (!dados.recursos || dados.recursos.length === 0) {
-    dados.recursos = ['lousa', 'quadro branco'];
+  try {
+    if (!dados || !dados.codigoHabilidade) {
+      return { erro: true, mensagem: 'Preencha todos os campos obrigatórios.' };
+    }
+    dados.codigoHabilidade = dados.codigoHabilidade.toUpperCase();
+    // Converter número de aulas (1–10) para minutos (50min cada)
+    dados.duracao = (parseInt(dados.duracao) || 1) * 50;
+    if (!dados.recursos || dados.recursos.length === 0) {
+      dados.recursos = ['lousa', 'quadro branco'];
+    }
+    const url = gerarPlanoDeAula(dados);
+    return { url: url };
+  } catch (e) {
+    registrarLog('ERRO', 'gerarPlanoDeAulaHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
   }
-  const url = gerarPlanoDeAula(dados);
-  return { url: url };
 }
 
 /** Corrigir selecionado — versão HTML */
@@ -994,16 +1015,22 @@ Mantenha os objetivos pedagógicos, mas torne o conteúdo acessível e adequado 
 
 /** Relatório da turma — versão HTML */
 function gerarRelatorioTurmaHTML(turma, componente, bimestre) {
-  const resultado = gerarRelatorioTurma(turma, componente, bimestre);
-  return {
-    url: resultado.urlProfessor || '',
-    urlPublico: resultado.urlPublico || ''
-  };
+  try {
+    const resultado = gerarRelatorioTurma(turma, componente, bimestre);
+    return {
+      url: resultado.urlProfessor || '',
+      urlPublico: resultado.urlPublico || ''
+    };
+  } catch (e) {
+    registrarLog('ERRO', 'gerarRelatorioTurmaHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
 /** Comunicado para família — versão HTML */
 function redigirComunicadoFamiliaHTML(motivo) {
-  const prompt = `Redija um comunicado escolar cordial e respeitoso para a família de um aluno.
+  try {
+    const prompt = `Redija um comunicado escolar cordial e respeitoso para a família de um aluno.
 
 MOTIVO: ${motivo}
 ESCOLA: Colégio Municipal de Itabatan — Mucuri-BA
@@ -1015,38 +1042,45 @@ O comunicado deve:
 • Incluir local e data (___/___/2026) e campo para assinatura do responsável
 • Máximo 15 linhas`;
 
-  const comunicado = chamarGemini(prompt);
-  const config = getConfig();
-  const titulo = `Comunicado_Familia_${timestampArquivo()}`;
-  const doc = DocumentApp.create(titulo);
-  const body = doc.getBody();
+    const comunicado = chamarGemini(prompt);
+    const config = getConfig();
+    const titulo = `Comunicado_Familia_${timestampArquivo()}`;
+    const doc = DocumentApp.create(titulo);
+    const body = doc.getBody();
 
-  body.appendParagraph(config.ESCOLA).setHeading(DocumentApp.ParagraphHeading.HEADING2);
-  body.appendParagraph(config.SECRETARIA).setItalic(true);
-  body.appendHorizontalRule();
-  body.appendParagraph('COMUNICADO AOS PAIS/RESPONSÁVEIS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  body.appendParagraph(comunicado);
-  doc.saveAndClose();
+    body.appendParagraph(config.ESCOLA).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+    body.appendParagraph(config.SECRETARIA).setItalic(true);
+    body.appendHorizontalRule();
+    body.appendParagraph('COMUNICADO AOS PAIS/RESPONSÁVEIS').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+    body.appendParagraph(comunicado);
+    doc.saveAndClose();
 
-  try {
-    const idPlanejamento = config.DRIVE.PLANEJAMENTO;
-    if (idPlanejamento) {
-      const pastaPlan = DriveApp.getFolderById(idPlanejamento);
-      const pastaTemplates = buscarOuCriarPasta('Templates', pastaPlan);
-      const arquivo = DriveApp.getFileById(doc.getId());
-      pastaTemplates.addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
-    }
-  } catch (e) {}
+    // BUG-04: usar moveTo em vez de addFile/removeFile
+    try {
+      const idPlanejamento = config.DRIVE.PLANEJAMENTO;
+      if (idPlanejamento) {
+        const pastaPlan = DriveApp.getFolderById(idPlanejamento);
+        const pastaTemplates = buscarOuCriarPasta('Templates', pastaPlan);
+        DriveApp.getFileById(doc.getId()).moveTo(pastaTemplates);
+      }
+    } catch (_) {}
 
-  registrarLog('INFO', 'Comunicado para família gerado via sidebar');
-  return { url: doc.getUrl() };
+    registrarLog('INFO', 'Comunicado para família gerado via sidebar');
+    return { url: doc.getUrl() };
+  } catch (e) {
+    registrarLog('ERRO', 'redigirComunicadoFamiliaHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
 /** Diagnóstico formativo — versão HTML */
 function criarDiagnosticoFormativoHTML(componente, ano, bncc) {
-  const habilidade = buscarHabilidadeBNCC(bncc.toUpperCase());
-  const prompt = `Crie uma sondagem diagnóstica com 5 questões rápidas para ${componente}, ${ano}.
+  try {
+    if (!componente || !ano || !bncc) {
+      return { erro: true, mensagem: 'Preencha todos os campos obrigatórios.' };
+    }
+    const habilidade = buscarHabilidadeBNCC(bncc.toUpperCase());
+    const prompt = `Crie uma sondagem diagnóstica com 5 questões rápidas para ${componente}, ${ano}.
 
 HABILIDADE BNCC: ${habilidade.codigo} — ${habilidade.descricao}
 
@@ -1056,28 +1090,34 @@ As questões devem:
 • Levar no máximo 15 minutos para responder
 • Ter gabarito ou critérios de avaliação ao final`;
 
-  const diagnostico = chamarGemini(prompt);
-  const doc = DocumentApp.create(`Diagnóstico_${bncc}_${ano}`);
-  doc.getBody().appendParagraph(diagnostico);
-  doc.saveAndClose();
+    const diagnostico = chamarGemini(prompt);
+    const doc = DocumentApp.create(`Diagnóstico_${bncc}_${ano}`);
+    doc.getBody().appendParagraph(diagnostico);
+    doc.saveAndClose();
 
-  // Mover para pasta PEDAGOGO.AI
-  try {
-    const config = getConfig();
-    const idPlanejamento = config.DRIVE.PLANEJAMENTO;
-    if (idPlanejamento) {
-      const arquivo = DriveApp.getFileById(doc.getId());
-      DriveApp.getFolderById(idPlanejamento).addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
-    }
-  } catch (e) {}
+    // BUG-04: usar moveTo em vez de addFile/removeFile
+    try {
+      const config = getConfig();
+      const idPlanejamento = config.DRIVE.PLANEJAMENTO;
+      if (idPlanejamento) {
+        DriveApp.getFileById(doc.getId()).moveTo(DriveApp.getFolderById(idPlanejamento));
+      }
+    } catch (_) {}
 
-  return { url: doc.getUrl() };
+    return { url: doc.getUrl() };
+  } catch (e) {
+    registrarLog('ERRO', 'criarDiagnosticoFormativoHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
 /** Pauta de conselho — versão HTML */
 function gerarPautaReuniaoHTML(turma, bimestre) {
-  const prompt = `Estruture uma pauta completa para o Conselho de Classe da turma ${turma}, ${bimestre}.
+  try {
+    if (!turma || !bimestre) {
+      return { erro: true, mensagem: 'Selecione a turma e o bimestre.' };
+    }
+    const prompt = `Estruture uma pauta completa para o Conselho de Classe da turma ${turma}, ${bimestre}.
 
 A pauta deve incluir:
 1. Abertura e apresentação dos participantes (5 min)
@@ -1091,48 +1131,71 @@ A pauta deve incluir:
 Escola: Colégio Municipal de Itabatan | SEME/Mucuri-BA
 Data: ___/___/2026 | Horário: _____`;
 
-  const pauta = chamarGemini(prompt);
-  const doc = DocumentApp.create(`Pauta_Conselho_${turma}_${bimestre}`);
-  doc.getBody().appendParagraph(pauta);
-  doc.saveAndClose();
+    const pauta = chamarGemini(prompt);
+    const doc = DocumentApp.create(`Pauta_Conselho_${turma}_${bimestre}`);
+    doc.getBody().appendParagraph(pauta);
+    doc.saveAndClose();
 
-  // Mover para pasta PEDAGOGO.AI
-  try {
-    const config = getConfig();
-    const idPlanejamento = config.DRIVE.PLANEJAMENTO;
-    if (idPlanejamento) {
-      const arquivo = DriveApp.getFileById(doc.getId());
-      DriveApp.getFolderById(idPlanejamento).addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
-    }
-  } catch (e) {}
+    // BUG-04: usar moveTo em vez de addFile/removeFile
+    try {
+      const config = getConfig();
+      const idPlanejamento = config.DRIVE.PLANEJAMENTO;
+      if (idPlanejamento) {
+        DriveApp.getFileById(doc.getId()).moveTo(DriveApp.getFolderById(idPlanejamento));
+      }
+    } catch (_) {}
 
-  return { url: doc.getUrl() };
+    return { url: doc.getUrl() };
+  } catch (e) {
+    registrarLog('ERRO', 'gerarPautaReuniaoHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
-/** Gerar PEI — versão HTML (bypass permissão — webapp já é autenticado) */
+/** Gerar PEI — versão HTML
+ *  CRÍTICO-06: verificar permissão antes de gerar PEI (dados LGPD sensíveis)
+ */
 function gerarPEIHTML(dados) {
-  // Registrar na trilha de auditoria (LGPD) em vez de bloquear
-  registrarAuditoria('ESCRITA', 'PEI_PDI', `Geração via webapp por ${getUsuarioAtivo()}`);
-  const url = _gerarPEISemPermissao(dados);
-  return { url: url };
+  try {
+    // CRÍTICO-06: acesso a dados de saúde/NEE requer papel mínimo de professor
+    verificarPermissao(PAPEIS.PROFESSOR);
+    registrarAuditoria('ESCRITA', 'PEI_PDI', `Geração via webapp por ${getUsuarioAtivo()}`);
+    const url = _gerarPEISemPermissao(dados);
+    return { url: url };
+  } catch (e) {
+    registrarLog('ERRO', 'gerarPEIHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
 /** Criar prova digital — versão HTML */
 function criarProvaDigitalHTML(idGabarito, prazo) {
-  const resultado = criarProvaDigital(idGabarito, { prazo: prazo });
-  return { urlForm: resultado.urlForm, urlEditar: resultado.urlEditar };
+  try {
+    const resultado = criarProvaDigital(idGabarito, { prazo: prazo });
+    return { urlForm: resultado.urlForm, urlEditar: resultado.urlEditar };
+  } catch (e) {
+    registrarLog('ERRO', 'criarProvaDigitalHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
 /** Corrigir lote — versão HTML */
 function corrigirLoteHTML(pastaId, enunciado, codigoBNCC) {
-  const rubricaPadrao = 'Critérios: 1) Compreensão do tema (3pts), 2) Desenvolvimento e argumentação (4pts), 3) Clareza e coesão textual (3pts)';
-  const resultado = corrigirLoteRedacoes(pastaId, enunciado, codigoBNCC.toUpperCase(), rubricaPadrao);
-  return {
-    totalCorrigidos: resultado.totalCorrigidos,
-    totalErros: resultado.totalErros,
-    urlRelatorio: resultado.urlRelatorio
-  };
+  try {
+    if (!pastaId || !enunciado || !codigoBNCC) {
+      return { erro: true, mensagem: 'Preencha todos os campos.' };
+    }
+    const rubricaPadrao = 'Critérios: 1) Compreensão do tema (3pts), 2) Desenvolvimento e argumentação (4pts), 3) Clareza e coesão textual (3pts)';
+    const resultado = corrigirLoteRedacoes(pastaId, enunciado, codigoBNCC.toUpperCase(), rubricaPadrao);
+    return {
+      totalCorrigidos: resultado.totalCorrigidos,
+      totalErros: resultado.totalErros,
+      urlRelatorio: resultado.urlRelatorio
+    };
+  } catch (e) {
+    registrarLog('ERRO', 'corrigirLoteHTML: ' + e.message);
+    return { erro: true, mensagem: e.message };
+  }
 }
 
 /** Diagnóstico do sistema — versão HTML */
@@ -1260,8 +1323,11 @@ function executarSetupCompletoHTML() {
     try { instalarTriggers(); } catch(e) {
       registrarLog('ALERTA', 'Triggers não instalados: ' + e.message);
     }
+    try { criarPastasParaTodosProfessores(); } catch(e) {
+      registrarLog('ALERTA', 'Pastas de professores: ' + e.message);
+    }
     salvarPropriedade('DATA_INSTALACAO', formatarData(new Date(), 'dd/MM/yyyy HH:mm:ss'));
-    salvarPropriedade('VERSAO_SISTEMA', '1.0');
+    salvarPropriedade('VERSAO_SISTEMA', '2.0');
     registrarLog('INFO', 'Setup concluído via webapp');
     return { sucesso: true, mensagem: 'Setup concluído! Pastas e planilhas criadas no Drive.' };
   } catch (e) {
@@ -1276,31 +1342,81 @@ function executarSetupCompletoHTML() {
  */
 function testarGeminiHTML() {
   const t0 = Date.now();
+  const resultado = testarConexaoIA();
+  return {
+    sucesso:    resultado.sucesso,
+    mensagem:   resultado.mensagem,
+    latenciaMs: Date.now() - t0
+  };
+}
+
+/**
+ * Retorna a configuração atual de IA para a sidebar (chaves mascaradas).
+ * @returns {Object}
+ */
+function getConfiguracaoIAHTML() {
   try {
-    const resposta = chamarGemini(
-      'Responda apenas com a palavra OK, sem pontuação, sem aspas.',
-      { temperature: 0, maxOutputTokens: 10, incluirSystemPrompt: false }
-    );
-    const latencia = Date.now() - t0;
-    const ok = resposta && resposta.trim().toLowerCase().includes('ok');
-    return {
-      sucesso:    ok,
-      mensagem:   ok ? `Gemini respondeu em ${latencia} ms.` : `Resposta inesperada: "${resposta}"`,
-      latenciaMs: latencia
-    };
+    return getConfiguracaoIA();
   } catch (e) {
-    return {
-      sucesso:    false,
-      mensagem:   e.message,
-      latenciaMs: Date.now() - t0
-    };
+    registrarLog('ERRO', 'getConfiguracaoIAHTML: ' + e.message);
+    return { erro: e.message };
   }
+}
+
+/**
+ * Salva a configuração de provider de IA via sidebar.
+ * @param {Object} dados
+ * @returns {{sucesso: boolean, mensagem: string}}
+ */
+function salvarConfiguracaoIAHTML(dados) {
+  try {
+    if (!dados) return { sucesso: false, mensagem: 'Dados não fornecidos.' };
+    salvarConfiguracaoIA(dados);
+    const provider = getProvedorAtivo();
+    return { sucesso: true, mensagem: `Provider "${_nomeExibicaoProvider(provider)}" configurado com sucesso.` };
+  } catch (e) {
+    registrarLog('ERRO', 'Erro ao salvar config IA: ' + e.message);
+    return { sucesso: false, mensagem: e.message };
+  }
+}
+
+/**
+ * Testa o provider de IA atualmente ativo.
+ * @returns {{sucesso: boolean, provider: string, modelo: string, mensagem: string}}
+ */
+function testarProviderIAHTML() {
+  return testarConexaoIA();
 }
 
 /**
  * Popula o catálogo BNCC via chamada da sidebar.
  * @returns {{sucesso: boolean, mensagem: string, inseridos: number}}
  */
+/**
+ * Importa habilidades BNCC de uma planilha Google Sheets externa.
+ * Chamado via google.script.run da interface HTML.
+ * @param {string} spreadsheetId - ID da planilha de origem
+ * @returns {{sucesso, inseridos, pulados, total, mensagem}}
+ */
+function importarBNCCDePlanilhaHTML(spreadsheetId) {
+  try {
+    if (!String(spreadsheetId || '').trim()) {
+      return { sucesso: false, mensagem: 'Informe o ID da planilha de origem.' };
+    }
+    const r = importarBNCCDeSpreadsheet(String(spreadsheetId).trim());
+    return {
+      sucesso:   true,
+      inseridos: r.inseridos,
+      pulados:   r.pulados,
+      total:     r.total,
+      mensagem:  `${r.inseridos} habilidade(s) importada(s). ${r.pulados} já existiam. Total lido: ${r.total}.`
+    };
+  } catch (e) {
+    registrarLog('ERRO', 'Import BNCC planilha externa: ' + e.message);
+    return { sucesso: false, mensagem: e.message };
+  }
+}
+
 function popularBNCCHTML() {
   try {
     const resultado = popularBNCCInicial();
@@ -1346,6 +1462,26 @@ function limparDadosTesteHTML() {
   } catch (e) {
     registrarLog('ERRO', 'Falha ao limpar dados de teste: ' + e.message);
     return { sucesso: false, mensagem: e.message };
+  }
+}
+
+/**
+ * Retorna todas as habilidades BNCC ativas para autocomplete no cliente.
+ * Chamada UMA vez por sessão — os dados são cacheados no client-side.
+ * @returns {Array} Lista de {codigo, componente, anoSerie, descricao}
+ */
+function listarTodosBNCCAutocompleteHTML() {
+  try {
+    const cache = _obterCacheBNCC();
+    return Object.values(cache).map(h => ({
+      codigo:     h.codigo,
+      componente: h.componente,
+      anoSerie:   h.anoSerie,
+      descricao:  h.descricao
+    }));
+  } catch (e) {
+    registrarLog('ERRO', 'Autocomplete BNCC: ' + e.message);
+    return [];
   }
 }
 
@@ -1450,7 +1586,7 @@ function lancarFrequenciaLoteHTML(turma, data, componente, registros) {
       alertas = frequencias.filter(a => a.percentualFalta >= limiteAlerta).length;
       if (alertas > 0) verificarLimiteFaltas(turma);
     } catch (e2) {
-      registrarLog('AVISO', 'Não foi possível verificar limite de faltas: ' + e2.message);
+      registrarLog('ALERTA', 'Não foi possível verificar limite de faltas: ' + e2.message);
     }
     registrarLog('INFO', `Chamada lançada: ${turma} | ${data} | ${processados} aluno(s)`);
     return { sucesso: true, processados, alertas };

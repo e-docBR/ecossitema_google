@@ -582,9 +582,7 @@ function _gerarRelatorioLote(resultados, enunciado, codigoHabilidade) {
     if (idResultados) {
       const pastaResultados = DriveApp.getFolderById(idResultados);
       const pastaRel = buscarOuCriarPasta('Relatorios_Analiticos', pastaResultados);
-      const arquivo = DriveApp.getFileById(doc.getId());
-      pastaRel.addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
+      DriveApp.getFileById(doc.getId()).moveTo(pastaRel);  // BUG-04: usar moveTo (Drive API v3)
     }
   } catch (e) {
     registrarLog('ALERTA', 'Relatório de lote não movido para pasta: ' + e.message);

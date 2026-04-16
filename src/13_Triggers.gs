@@ -167,8 +167,9 @@ function verificarFrequenciaSemanalTodas() {
     if (!config.SHEETS.TURMAS_ALUNOS) return;
 
     const dados = lerAba(config.SHEETS.TURMAS_ALUNOS, 'Turmas');
+    // BUG-01: usar estaAtivo() para normalizar comparação de status
     const turmasAtivas = dados.slice(1)
-      .filter(t => String(t[7]).toLowerCase() === 'true' || String(t[7]) === 'TRUE')
+      .filter(t => estaAtivo(t[7]))
       .map(t => String(t[0]));  // Código da turma
 
     turmasAtivas.forEach(turma => {

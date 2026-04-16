@@ -76,9 +76,18 @@ function executarSetupCompleto() {
       registrarLog('ALERTA', 'Formulário de Plano de Aula não criado: ' + e.message);
     }
 
-    // Etapa 7: Registrar data de instalação
+    // Etapa 7: Criar pastas individuais dos professores (Sprint 3)
+    _mostrarProgresso(ui, '👨‍🏫 Criando pastas individuais dos professores...');
+    try {
+      const resultPastas = criarPastasParaTodosProfessores();
+      registrarLog('INFO', `Pastas de professores criadas: ${resultPastas.criadas}`, `Erros: ${resultPastas.erros}`);
+    } catch (e) {
+      registrarLog('ALERTA', 'Pastas de professores não criadas (execute criarPastasParaTodosProfessores() após cadastrar professores): ' + e.message);
+    }
+
+    // Etapa 8: Registrar data de instalação
     salvarPropriedade('DATA_INSTALACAO', formatarData(new Date(), 'dd/MM/yyyy HH:mm:ss'));
-    salvarPropriedade('VERSAO_SISTEMA', '1.0');
+    salvarPropriedade('VERSAO_SISTEMA', '2.0');
 
     const urlFormPlano = formularios.planoDeAula || '(não criado — execute criarFormPlanoDeAula() manualmente)';
 
@@ -126,22 +135,29 @@ function executarSetupCompleto() {
  * @throws {Error} Se algum pré-requisito estiver faltando
  */
 function verificarPreRequisitos() {
-  // GEMINI_KEY é necessária apenas para as ferramentas de IA,
-  // NÃO para criar pastas e planilhas. Ela pode ser configurada depois.
-  let geminiOk = false;
+  const provider = getProvedorAtivo();
+  let chaveOk = false;
+
   try {
-    getGeminiKey();
-    geminiOk = true;
+    if (provider === 'gemini') {
+      getGeminiKey();
+      chaveOk = true;
+    } else if (provider === 'openrouter') {
+      getOpenRouterKey();
+      chaveOk = true;
+    } else if (provider === 'ollama') {
+      getOllamaEndpoint();
+      chaveOk = true;
+    }
   } catch (e) {
-    // Não bloquear — apenas registrar aviso
     registrarLog(
       'ALERTA',
-      'GEMINI_KEY não configurada. Configure em: menu → 🔧 Configurar antes de usar as ferramentas de IA.'
+      `Chave/endpoint do provider "${provider}" não configurado. Configure em ⚙️ Configurar IA antes de usar as ferramentas de IA.`
     );
   }
 
-  registrarLog('INFO', `Pré-requisitos verificados — GEMINI_KEY: ${geminiOk ? 'OK' : 'PENDENTE (configurar depois)'}`);
-  return { geminiOk: geminiOk };
+  registrarLog('INFO', `Pré-requisitos verificados — provider: ${provider} | chave/endpoint: ${chaveOk ? 'OK' : 'PENDENTE (configurar depois)'}`);
+  return { chaveOk: chaveOk, provider: provider };
 }
 
 // ============================================================
@@ -185,10 +201,8 @@ function criarPlanilhasMestre() {
 
     if (!ss) {
       ss = SpreadsheetApp.create(`PEDAGOGO_AI_${nome}`);
-      // Mover para pasta de configurações
-      const arquivo = DriveApp.getFileById(ss.getId());
-      pastaConfig.addFile(arquivo);
-      DriveApp.getRootFolder().removeFile(arquivo);
+      // BUG-07: usar moveTo (Drive API v3) em vez do addFile/removeFile frágil
+      DriveApp.getFileById(ss.getId()).moveTo(pastaConfig);
       salvarPropriedade(chave, ss.getId());
       registrarLog('INFO', `Planilha ${nome} criada`, ss.getId());
     }
@@ -410,7 +424,7 @@ function _configurarLayoutPlanilhaHost(ss) {
     ['•', 'Dados sensíveis (NEE, laudos) ficam protegidos por LGPD nas planilhas TURMAS_ALUNOS'],
     ['•', 'Notas e avaliações geradas pela IA SEMPRE requerem confirmação do professor'],
     ['', ''],
-    ['VERSÃO', '1.0 — Abril 2026'],
+    ['VERSÃO', '2.0 — Abril 2026'],
     ['ESCOLA', 'Colégio Municipal de 1º e 2º Graus de Itabatan'],
     ['SECRETARIA', 'SEME/Mucuri-BA'],
   ];
