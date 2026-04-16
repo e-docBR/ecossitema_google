@@ -87,6 +87,72 @@ function doGet(_e) {
 }
 
 /**
+ * Retorna o perfil completo do usuário ativo para a interface.
+ * Chamado uma vez por carregamento de página — sem parâmetros sensíveis.
+ * @returns {Object} perfil do usuário com email, papel, nivelAcesso e capacidades
+ */
+function obterPerfilUsuarioAtualHTML() {
+  try {
+    return obterPerfilUsuarioAtual();
+  } catch (e) {
+    registrarLog('ERRO', 'obterPerfilUsuarioAtualHTML: ' + e.message);
+    return { email: getUsuarioAtivo(), papel: 'nao_cadastrado', nivelAcesso: 0,
+             papelLabel: 'Não cadastrado', ehCadastrado: false,
+             ehProfessor: false, ehCoordenador: false, ehGestor: false, ehAdmin: false,
+             capacidades: {} };
+  }
+}
+
+/**
+ * Wrapper para listarUsuariosPorPapel — requer GESTOR.
+ * @returns {Object|{erro, mensagem}}
+ */
+function listarUsuariosPorPapelHTML() {
+  try {
+    verificarPermissao(PAPEIS.GESTOR);
+    return listarUsuariosPorPapel();
+  } catch (e) {
+    return { erro: true, mensagem: e.message };
+  }
+}
+
+/**
+ * Wrapper para adicionarUsuarioAoPapel — requer GESTOR.
+ */
+function adicionarUsuarioAoPapelHTML(email, papel) {
+  try {
+    adicionarUsuarioAoPapel(email, papel);
+    return { sucesso: true, mensagem: `${email} adicionado como ${papel}.` };
+  } catch (e) {
+    return { sucesso: false, mensagem: e.message };
+  }
+}
+
+/**
+ * Wrapper para removerUsuarioDoPapel — requer GESTOR.
+ */
+function removerUsuarioDoPapelHTML(email, papel) {
+  try {
+    removerUsuarioDoPapel(email, papel);
+    return { sucesso: true, mensagem: `${email} removido do papel ${papel}.` };
+  } catch (e) {
+    return { sucesso: false, mensagem: e.message };
+  }
+}
+
+/**
+ * Bootstrap: registrar o usuário atual como admin (só funciona se EMAILS_ADMIN estiver vazio).
+ */
+function registrarMeComoAdminHTML() {
+  try {
+    const msg = registrarMeComoAdmin();
+    return { sucesso: true, mensagem: msg };
+  } catch (e) {
+    return { sucesso: false, mensagem: e.message };
+  }
+}
+
+/**
  * Retorna estatísticas para o Dashboard do webapp.
  * @returns {{turmasAtivas, bnccCount, geminiOk, pastasOk, planilhasOk, emailOk}}
  */
@@ -115,6 +181,7 @@ function obterDashboardHTML() {
  */
 function gerarQuestoesTextoHTML(texto) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     if (!texto || texto.trim().length < 50) {
       return { sucesso: false, mensagem: 'Texto muito curto. Forneça pelo menos um parágrafo.' };
     }
@@ -141,6 +208,7 @@ function gerarQuestoesTextoHTML(texto) {
  */
 function corrigirTextoHTML(respostaAluno, enunciado, codigoBNCC) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     if (!respostaAluno || !enunciado || !codigoBNCC) {
       return { sucesso: false, mensagem: 'Preencha todos os campos obrigatórios.' };
     }
@@ -161,6 +229,7 @@ function corrigirTextoHTML(respostaAluno, enunciado, codigoBNCC) {
  */
 function adaptarConteudoTextoHTML(tipo, texto) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     if (!texto || texto.trim().length < 20) {
       return { sucesso: false, mensagem: 'Forneça o conteúdo a adaptar.' };
     }
@@ -927,6 +996,7 @@ Adapte o nível de complexidade para o Ensino Fundamental.`;
 /** Gerar plano de aula — versão HTML */
 function gerarPlanoDeAulaHTML(dados) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     if (!dados || !dados.codigoHabilidade) {
       return { erro: true, mensagem: 'Preencha todos os campos obrigatórios.' };
     }
@@ -947,6 +1017,7 @@ function gerarPlanoDeAulaHTML(dados) {
 /** Corrigir selecionado — versão HTML */
 function corrigirSelecionadoHTML(dados) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     const respostaAluno = obterTextoSelecionado();
     if (!respostaAluno) {
       return { sucesso: false, mensagem: 'Selecione a resposta do aluno no documento antes de corrigir.' };
@@ -981,6 +1052,7 @@ function corrigirSelecionadoHTML(dados) {
 /** Adaptar para NEE/EJA — versão HTML */
 function adaptarParaNEEHTML(tipo) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     const textoOriginal = obterTextoSelecionado();
     if (!textoOriginal) {
       return { sucesso: false, mensagem: 'Selecione o conteúdo a adaptar no documento.' };
@@ -1016,6 +1088,7 @@ Mantenha os objetivos pedagógicos, mas torne o conteúdo acessível e adequado 
 /** Relatório da turma — versão HTML */
 function gerarRelatorioTurmaHTML(turma, componente, bimestre) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     const resultado = gerarRelatorioTurma(turma, componente, bimestre);
     return {
       url: resultado.urlProfessor || '',
@@ -1030,6 +1103,7 @@ function gerarRelatorioTurmaHTML(turma, componente, bimestre) {
 /** Comunicado para família — versão HTML */
 function redigirComunicadoFamiliaHTML(motivo) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     const prompt = `Redija um comunicado escolar cordial e respeitoso para a família de um aluno.
 
 MOTIVO: ${motivo}
@@ -1076,6 +1150,7 @@ O comunicado deve:
 /** Diagnóstico formativo — versão HTML */
 function criarDiagnosticoFormativoHTML(componente, ano, bncc) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     if (!componente || !ano || !bncc) {
       return { erro: true, mensagem: 'Preencha todos os campos obrigatórios.' };
     }
@@ -1114,6 +1189,7 @@ As questões devem:
 /** Pauta de conselho — versão HTML */
 function gerarPautaReuniaoHTML(turma, bimestre) {
   try {
+    verificarPermissao(PAPEIS.COORDENADOR);
     if (!turma || !bimestre) {
       return { erro: true, mensagem: 'Selecione a turma e o bimestre.' };
     }
@@ -1567,6 +1643,7 @@ function listarAlunosTurmaHTML(turma) {
  */
 function lancarFrequenciaLoteHTML(turma, data, componente, registros) {
   try {
+    verificarPermissao(PAPEIS.PROFESSOR);
     if (!turma || !data || !registros || registros.length === 0) {
       return { sucesso: false, mensagem: 'Dados incompletos para lançamento.' };
     }
@@ -1650,6 +1727,7 @@ function buscarFrequenciasResumoHTML(turma) {
  */
 function matricularAlunoHTML(dados) {
   try {
+    verificarPermissao(PAPEIS.COORDENADOR);
     if (!dados || !dados.nomeCompleto || !dados.turma || !dados.segmento) {
       return { sucesso: false, mensagem: 'Campos obrigatórios não preenchidos: Nome, Turma e Segmento.' };
     }

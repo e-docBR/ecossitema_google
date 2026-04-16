@@ -15,38 +15,26 @@
 
 /**
  * Verifica se o usuário ativo tem o papel necessário para executar a ação.
- * Deve ser chamado antes de qualquer acesso a dados sensíveis ou restritos.
+ * Usa getUsuarioPapel() (17_Usuarios.gs) como fonte de verdade — suporta
+ * PropertiesService, aba Professores e fallback proprietário com auditoria.
  *
  * @param {string} papelRequerido - Ex: PAPEIS.COORDENADOR, PAPEIS.PROFESSOR
  * @throws {Error} Se o usuário não tiver autorização
  */
 function verificarPermissao(papelRequerido) {
-  const email = getUsuarioAtivo();
-  const props = PropertiesService.getScriptProperties();
+  const email    = getUsuarioAtivo();
+  const papel    = getUsuarioPapel(email);    // fonte de verdade centralizada
+  const nivelAtual    = nivelPapel(papel);
+  const nivelRequerido = nivelPapel(papelRequerido);
 
-  // Hierarquia: ADMIN > GESTOR > COORDENADOR > PROFESSOR
-  const hierarquia = [PAPEIS.PROFESSOR, PAPEIS.COORDENADOR, PAPEIS.GESTOR, PAPEIS.ADMIN];
-  const nivelRequerido = hierarquia.indexOf(papelRequerido);
+  if (nivelAtual >= nivelRequerido && nivelAtual > 0) return;  // autorizado
 
-  // Verificar cada papel a partir do requerido
-  for (let i = nivelRequerido; i < hierarquia.length; i++) {
-    const papel = hierarquia[i];
-    const emailsAutorizados = (props.getProperty(`EMAILS_${papel.toUpperCase()}`) || '').split(',');
-    if (emailsAutorizados.some(e => e.trim().toLowerCase() === email.toLowerCase())) {
-      return;  // Autorizado
-    }
-  }
-
-  // Proprietário do script tem acesso total
-  try {
-    if (Session.getActiveUser().getEmail() === DriveApp.getRootFolder().getOwner().getEmail()) {
-      return;
-    }
-  } catch(e) {}
-
-  registrarLog('ALERTA', `Acesso negado para ${email}`, `Papel requerido: ${papelRequerido}`);
+  registrarLog('ALERTA', `Acesso negado para ${email}`,
+    `Requerido: ${papelRequerido} (nível ${nivelRequerido}) | Atual: ${papel || 'não cadastrado'} (nível ${nivelAtual})`
+  );
   throw new Error(
     `Acesso não autorizado. Esta ação requer o papel: ${papelRequerido}.\n` +
+    `Seu papel atual: ${papel ? papel : 'não cadastrado'}.\n` +
     `Contate o administrador do sistema para solicitar permissão.`
   );
 }

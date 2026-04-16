@@ -18,6 +18,10 @@ function navegarPara(pagina) {
   document.querySelectorAll('.resultado-container').forEach(function(el) {
     el.innerHTML = '';
   });
+  // Inicialização por página
+  if (pagina === 'usuarios' && typeof carregarUsuarios === 'function') {
+    carregarUsuarios();
+  }
 }
 
 /** Mostra overlay de carregamento com mensagem customizada */

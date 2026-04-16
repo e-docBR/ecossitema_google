@@ -14,6 +14,11 @@
 <div class="header">
   <h1>🤖 PEDAGOGO.AI</h1>
   <small>Colégio Municipal de Itabatan</small>
+  <div id="user-badge" style="margin-top:4px;font-size:11px;opacity:0.85;">
+    <span id="user-email-badge">Carregando...</span>
+    <span id="user-papel-badge" style="margin-left:6px;padding:1px 7px;border-radius:10px;
+      background:rgba(255,255,255,0.25);font-weight:600;font-size:10px;"></span>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -92,9 +97,22 @@
       <span class="emoji">📅</span>
       <span class="label">Lançar Frequência</span>
     </div>
-    <div class="tool-card" onclick="navegarPara('matricula')">
+    <div class="tool-card role-coordenador" onclick="navegarPara('matricula')">
       <span class="emoji">👤</span>
       <span class="label">Matricular Aluno</span>
+    </div>
+    <div class="tool-card role-gestor" onclick="navegarPara('usuarios')">
+      <span class="emoji">🔑</span>
+      <span class="label">Gerenciar Usuários</span>
+    </div>
+  </div>
+
+  <!-- Bootstrap para primeiro admin -->
+  <div id="bootstrap-admin" style="display:none;margin:8px 0;">
+    <div class="resultado resultado-erro" style="font-size:12px;padding:8px;">
+      ⚠️ Nenhum admin cadastrado.<br>
+      <button class="btn-primario" style="margin-top:6px;font-size:11px;padding:4px 10px;"
+        onclick="registrarMeAdmin()">Registrar-me como Admin</button>
     </div>
   </div>
 
@@ -103,6 +121,45 @@
     <a onclick="navegarPara('configurar-ia')">⚙️ Configurar IA</a>
     <a onclick="navegarPara('sistema')">⚙️ Sistema</a>
     <a onclick="navegarPara('sobre')">ℹ️ Sobre</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PÁGINA: USUÁRIOS (visível apenas para gestor+)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-usuarios" class="pagina oculto">
+  <div class="nav-voltar" onclick="navegarPara('home')">← Voltar</div>
+  <div class="form-page">
+    <h2>🔑 Gerenciar Usuários</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:12px;">
+      Defina quem pode acessar o PEDAGOGO.AI e com qual papel.
+    </p>
+
+    <!-- Usuários cadastrados -->
+    <div class="section-title" style="margin-top:0;">Usuários Cadastrados</div>
+    <div id="lista-usuarios" style="font-size:12px;">Carregando...</div>
+    <button class="btn-secundario" style="width:100%;margin-top:8px;font-size:12px;"
+      onclick="carregarUsuarios()">🔄 Atualizar lista</button>
+
+    <!-- Adicionar usuário -->
+    <div class="section-title" style="margin-top:16px;">Adicionar / Alterar Papel</div>
+    <div class="campo">
+      <label for="usr-email">E-mail do usuário</label>
+      <input type="email" id="usr-email" placeholder="professor@escola.edu.br">
+    </div>
+    <div class="campo">
+      <label for="usr-papel">Papel</label>
+      <select id="usr-papel">
+        <option value="professor">Professor(a)</option>
+        <option value="coordenador">Coordenador(a)</option>
+        <option value="gestor">Gestor(a) / Diretor(a)</option>
+        <option value="admin" id="opt-admin" style="display:none;">Administrador</option>
+      </select>
+    </div>
+    <button class="btn-primario" style="width:100%;" onclick="adicionarUsuario()">
+      ✅ Adicionar / Atualizar
+    </button>
+    <div id="resultado-usuarios" style="margin-top:8px;"></div>
   </div>
 </div>
 
@@ -879,6 +936,8 @@
 <script>
 /* ── Inicialização ──────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function() {
+  // Carregar perfil do usuário (badge + controle de acesso)
+  carregarPerfilUsuario();
   // Carregar turmas nos selects que precisam
   carregarTurmas('relatorio-turma');
   carregarTurmas('pauta-turma');
@@ -1554,6 +1613,129 @@ function verResumoFaltas() {
       container.innerHTML = html;
     },
     '📊 Carregando resumo de faltas...'
+  );
+}
+
+/* ══ PERFIL / CONTROLE DE ACESSO ════════════════════════════ */
+
+var _perfilUsuario = null;  // cache local durante a sessão da sidebar
+
+function carregarPerfilUsuario() {
+  google.script.run
+    .withSuccessHandler(function(perfil) {
+      _perfilUsuario = perfil;
+      // Preencher badge do cabeçalho
+      var emailBadge = document.getElementById('user-email-badge');
+      var papelBadge = document.getElementById('user-papel-badge');
+      if (emailBadge) emailBadge.textContent = perfil.email || '';
+      if (papelBadge) papelBadge.textContent = perfil.papelLabel || 'Sem acesso';
+
+      // Aplicar visibilidade dos cards por papel
+      aplicarVisibilidadePorPapel(perfil.nivelAcesso || 0);
+
+      // Mostrar opção admin no select apenas para admins
+      var optAdmin = document.getElementById('opt-admin');
+      if (optAdmin) optAdmin.style.display = perfil.ehAdmin ? '' : 'none';
+
+      // Bootstrap: mostrar aviso se sem acesso
+      var bootstrap = document.getElementById('bootstrap-admin');
+      if (bootstrap) bootstrap.style.display = (!perfil.ehCadastrado) ? '' : 'none';
+    })
+    .withFailureHandler(function() {})
+    .obterPerfilUsuarioAtualHTML();
+}
+
+function aplicarVisibilidadePorPapel(nivel) {
+  // role-coordenador: visível para coordenador+ (nível >=2)
+  var cardsCoordenador = document.querySelectorAll('.role-coordenador');
+  cardsCoordenador.forEach(function(el) {
+    el.style.display = nivel >= 2 ? '' : 'none';
+  });
+  // role-gestor: visível para gestor+ (nível >=3)
+  var cardsGestor = document.querySelectorAll('.role-gestor');
+  cardsGestor.forEach(function(el) {
+    el.style.display = nivel >= 3 ? '' : 'none';
+  });
+}
+
+function registrarMeAdmin() {
+  chamarServidor('registrarMeComoAdminHTML', [],
+    function(res) {
+      if (res.sucesso) {
+        mostrarToast('✅ ' + res.mensagem, 'sucesso');
+        carregarPerfilUsuario();  // recarregar badge e permissões
+      } else {
+        mostrarToast('❌ ' + res.mensagem, 'erro');
+      }
+    },
+    'Registrando admin...'
+  );
+}
+
+/* ══ GERENCIAR USUÁRIOS ══════════════════════════════════════ */
+
+function carregarUsuarios() {
+  var container = document.getElementById('lista-usuarios');
+  if (!container) return;
+  container.innerHTML = 'Carregando...';
+  google.script.run
+    .withSuccessHandler(function(dados) {
+      if (dados.erro) {
+        container.innerHTML = '<span style="color:#d93025;">❌ ' + escapeHtml(dados.mensagem) + '</span>';
+        return;
+      }
+      var html = '';
+      var papeis = { admin: '🔴 Admin', gestor: '🟠 Gestor', coordenador: '🟡 Coordenador', professor: '🟢 Professor' };
+      Object.keys(papeis).forEach(function(papel) {
+        var lista = dados[papel] || [];
+        if (lista.length === 0) return;
+        html += '<div style="margin-bottom:8px;"><strong>' + papeis[papel] + '</strong><ul style="margin:4px 0 0 12px;padding:0;">';
+        lista.forEach(function(email) {
+          html += '<li style="list-style:disc;font-size:11px;color:#333;">' + escapeHtml(email) +
+            ' <a href="#" style="color:#d93025;font-size:10px;" onclick="removerUsuario(\'' +
+            escapeHtml(email) + '\',\'' + papel + '\');return false;">remover</a></li>';
+        });
+        html += '</ul></div>';
+      });
+      container.innerHTML = html || '<em style="color:#888;">Nenhum usuário cadastrado.</em>';
+    })
+    .withFailureHandler(function(e) {
+      container.innerHTML = '<span style="color:#d93025;">❌ Erro ao carregar usuários.</span>';
+    })
+    .listarUsuariosPorPapelHTML();
+}
+
+function adicionarUsuario() {
+  var email = document.getElementById('usr-email').value.trim();
+  var papel = document.getElementById('usr-papel').value;
+  if (!email) { mostrarToast('Informe o e-mail do usuário.', 'erro'); return; }
+  chamarServidor('adicionarUsuarioAoPapelHTML', [email, papel],
+    function(res) {
+      var div = document.getElementById('resultado-usuarios');
+      if (res.sucesso) {
+        div.innerHTML = '<div class="resultado">✅ ' + escapeHtml(res.mensagem) + '</div>';
+        document.getElementById('usr-email').value = '';
+        carregarUsuarios();
+      } else {
+        div.innerHTML = '<div class="resultado resultado-erro">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      }
+    },
+    'Adicionando usuário...'
+  );
+}
+
+function removerUsuario(email, papel) {
+  if (!confirm('Remover ' + email + ' do papel ' + papel + '?')) return;
+  chamarServidor('removerUsuarioDoPapelHTML', [email, papel],
+    function(res) {
+      if (res.sucesso) {
+        mostrarToast('✅ ' + res.mensagem, 'sucesso');
+        carregarUsuarios();
+      } else {
+        mostrarToast('❌ ' + res.mensagem, 'erro');
+      }
+    },
+    'Removendo usuário...'
   );
 }
 

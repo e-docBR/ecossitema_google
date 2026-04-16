@@ -325,7 +325,9 @@
     </div>
   </div>
   <div class="topbar-user">
-    👤 <?= usuario ?>
+    👤 <span id="wa-user-email"><?= usuario ?></span>
+    <span id="wa-user-badge" style="margin-left:6px;padding:2px 8px;border-radius:10px;
+      background:rgba(255,255,255,0.2);font-size:11px;font-weight:600;"></span>
   </div>
 </header>
 
@@ -394,9 +396,13 @@
       <span class="nav-icon">📅</span>
       <span class="nav-label">Frequência</span>
     </a>
-    <a class="nav-item" data-page="matricula" onclick="irPara('matricula')">
+    <a class="nav-item role-coordenador" data-page="matricula" onclick="irPara('matricula')">
       <span class="nav-icon">👤</span>
       <span class="nav-label">Matricular Aluno</span>
+    </a>
+    <a class="nav-item role-gestor" data-page="usuarios" onclick="irPara('usuarios')">
+      <span class="nav-icon">🔑</span>
+      <span class="nav-label">Usuários</span>
     </a>
 
     <div class="nav-section-label">Sistema</div>
@@ -1185,6 +1191,38 @@
       <div id="wa-resultado-sistema" class="resultado-container mt-16"></div>
     </div>
 
+    <!-- ═══════════════════════════════════════ USUÁRIOS ════════ -->
+    <div class="pagina-webapp" id="wa-usuarios">
+      <div class="page-title">🔑 Gerenciar Usuários</div>
+      <div class="page-subtitle">Defina os papéis de acesso ao PEDAGOGO.AI.</div>
+
+      <div class="form-card">
+        <h3 style="margin-bottom:12px;">Usuários Cadastrados</h3>
+        <div id="wa-lista-usuarios" style="font-size:13px;">Carregando...</div>
+        <button class="btn btn-secondary" style="margin-top:12px;"
+          onclick="wa_carregarUsuarios()">🔄 Atualizar</button>
+      </div>
+
+      <div class="form-card">
+        <h3 style="margin-bottom:12px;">Adicionar / Alterar Papel</h3>
+        <div class="form-group">
+          <label>E-mail do usuário</label>
+          <input type="email" id="wa-usr-email" placeholder="usuario@escola.edu.br" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Papel</label>
+          <select id="wa-usr-papel" class="form-control">
+            <option value="professor">Professor(a)</option>
+            <option value="coordenador">Coordenador(a)</option>
+            <option value="gestor">Gestor(a) / Diretor(a)</option>
+            <option value="admin" id="wa-opt-admin" style="display:none;">Administrador</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="wa_adicionarUsuario()">✅ Adicionar / Atualizar</button>
+        <div id="wa-resultado-usuarios" class="resultado-container mt-16"></div>
+      </div>
+    </div>
+
   </main><!-- /main-content -->
 </div><!-- /app-layout -->
 
@@ -1211,6 +1249,25 @@ document.getElementById('dash-data').textContent = new Date().toLocaleDateString
 
 /* Carrega turmas em todos os selects do webapp — chamada única */
 function wa_init() {
+  // Perfil do usuário: badge + controle de acesso
+  google.script.run
+    .withSuccessHandler(function(perfil) {
+      var badge = document.getElementById('wa-user-badge');
+      if (badge) badge.textContent = perfil.papelLabel || '';
+      // Role-based nav visibility
+      document.querySelectorAll('.role-coordenador').forEach(function(el) {
+        el.style.display = perfil.nivelAcesso >= 2 ? '' : 'none';
+      });
+      document.querySelectorAll('.role-gestor').forEach(function(el) {
+        el.style.display = perfil.nivelAcesso >= 3 ? '' : 'none';
+      });
+      // Mostrar opção admin no select de papel apenas para admins
+      var optAdmin = document.getElementById('wa-opt-admin');
+      if (optAdmin) optAdmin.style.display = perfil.ehAdmin ? '' : 'none';
+    })
+    .withFailureHandler(function() {})
+    .obterPerfilUsuarioAtualHTML();
+
   // Buscar turmas UMA vez e popular todos os selects
   chamarServidor('listarTurmasAtivasHTML', [], function(turmas) {
     ['wa-plano-turma','wa-rel-turma','wa-pauta-turma','wa-pei-turma',
@@ -1256,6 +1313,71 @@ function irPara(pagina) {
   // Inicializar página conforme necessário
   if (pagina === 'configuracoes') wa_carregarStatusConfig();
   if (pagina === 'configurar-ia') wa_carregarConfiguracaoIA();
+  if (pagina === 'usuarios') wa_carregarUsuarios();
+}
+
+/* ── Gestão de Usuários (webapp) ─────────────────────────── */
+
+function wa_carregarUsuarios() {
+  var container = document.getElementById('wa-lista-usuarios');
+  if (!container) return;
+  container.innerHTML = 'Carregando...';
+  google.script.run
+    .withSuccessHandler(function(dados) {
+      if (dados.erro) {
+        container.innerHTML = '<span style="color:#d93025;">❌ ' + escapeHtml(dados.mensagem) + '</span>';
+        return;
+      }
+      var papeis = { admin: '🔴 Admin', gestor: '🟠 Gestor', coordenador: '🟡 Coordenador', professor: '🟢 Professor' };
+      var html = '';
+      Object.keys(papeis).forEach(function(papel) {
+        var lista = dados[papel] || [];
+        if (!lista.length) return;
+        html += '<div style="margin-bottom:12px;"><strong>' + papeis[papel] + '</strong><ul style="margin:4px 0 0 16px;padding:0;">';
+        lista.forEach(function(email) {
+          html += '<li>' + escapeHtml(email) +
+            ' <a href="#" style="color:#d93025;font-size:11px;margin-left:8px;" ' +
+            'onclick="wa_removerUsuario(\'' + escapeHtml(email) + '\',\'' + papel + '\');return false;">[remover]</a></li>';
+        });
+        html += '</ul></div>';
+      });
+      container.innerHTML = html || '<em style="color:#888;">Nenhum usuário cadastrado.</em>';
+    })
+    .withFailureHandler(function() {
+      container.innerHTML = '<span style="color:#d93025;">❌ Erro ao carregar.</span>';
+    })
+    .listarUsuariosPorPapelHTML();
+}
+
+function wa_adicionarUsuario() {
+  var email = document.getElementById('wa-usr-email').value.trim();
+  var papel = document.getElementById('wa-usr-papel').value;
+  var result = document.getElementById('wa-resultado-usuarios');
+  if (!email) { result.innerHTML = '<div class="alert alert-danger">Informe o e-mail.</div>'; return; }
+  chamarServidor('adicionarUsuarioAoPapelHTML', [email, papel],
+    function(res) {
+      if (res.sucesso) {
+        result.innerHTML = '<div class="alert alert-success">✅ ' + escapeHtml(res.mensagem) + '</div>';
+        document.getElementById('wa-usr-email').value = '';
+        wa_carregarUsuarios();
+      } else {
+        result.innerHTML = '<div class="alert alert-danger">❌ ' + escapeHtml(res.mensagem) + '</div>';
+      }
+    },
+    'Adicionando usuário...'
+  );
+}
+
+function wa_removerUsuario(email, papel) {
+  if (!confirm('Remover ' + email + ' do papel ' + papel + '?')) return;
+  chamarServidor('removerUsuarioDoPapelHTML', [email, papel],
+    function(res) {
+      mostrarToast(res.sucesso ? '✅ ' + res.mensagem : '❌ ' + res.mensagem,
+                   res.sucesso ? 'sucesso' : 'erro');
+      wa_carregarUsuarios();
+    },
+    'Removendo...'
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════
